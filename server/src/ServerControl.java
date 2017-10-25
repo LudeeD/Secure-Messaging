@@ -272,7 +272,7 @@ class ServerControl {
             nr = newFile( path );
             saveOnFile ( path + nr, msg );
 
-            result = "[\"" + src + "_" + nr;
+            result = "[\"" + src + "_" + nr + "\"";
 
             path = userReceiptBox( src ) + "/" + dst + "_";
             saveOnFile ( path + nr, receipt );
@@ -399,7 +399,7 @@ class ServerControl {
             }
         }
 
-        return result + "]";
+        return result + "]}";
     }
 
 }

@@ -85,13 +85,13 @@ class ServerActions implements Runnable {
 
             if (uuid == null) {
                 System.err.print ( "No \"uuid\" field in \"create\" request: " + data );
-                sendResult( null, "wrong request format" );
+                sendResult( null, "\"wrong request format\"" );
                 return;
             }
 
             if (registry.userExists( uuid.getAsString() )) {
                 System.err.println ( "User already exists: " + data );
-                sendResult( null, "uuid already exists" );
+                sendResult( null, "\"uuid already exists\"" );
                 return;
             }
 
@@ -129,7 +129,7 @@ class ServerActions implements Runnable {
 
             if (id == null || user <= 0) {
                 System.err.print ( "No valid \"id\" field in \"new\" request: " + data );
-                sendResult( null, "wrong request format" );
+                sendResult( null, "\"wrong request format\"" );
                 return;
             }
 
@@ -145,7 +145,7 @@ class ServerActions implements Runnable {
 
             if (id == null || user <= 0) {
                 System.err.print ( "No valid \"id\" field in \"new\" request: " + data );
-                sendResult( null, "wrong request format" );
+                sendResult( null, "\"wrong request format\"" );
                 return;
             }
 
@@ -164,7 +164,7 @@ class ServerActions implements Runnable {
 
             if (src == null || dst == null || msg == null || copy == null) {
                 System.err.print ( "Badly formated \"send\" request: " + data );
-                sendResult( null, "wrong request format" );
+                sendResult( null, "\"wrong request format\"" );
                 return;
             }
 
@@ -173,13 +173,13 @@ class ServerActions implements Runnable {
 
             if (registry.userExists( srcId ) == false) {
                 System.err.print ( "Unknown source id for \"send\" request: " + data );
-                sendResult( null, "wrong parameters" );
+                sendResult( null, "\"wrong parameters\"" );
                 return;
             }
 
             if (registry.userExists( dstId ) == false) {
                 System.err.print ( "Unknown destination id for \"send\" request: " + data );
-                sendResult( null, "wrong parameters" );
+                sendResult( null, "\"wrong parameters\"" );
                 return;
             }
 
@@ -201,7 +201,7 @@ class ServerActions implements Runnable {
 
             if (id == null || msg == null) {
                 System.err.print ( "Badly formated \"recv\" request: " + data );
-                sendResult( null, "wrong request format" );
+                sendResult( null, "\"wrong request format\"" );
                 return;
             }
 
@@ -209,13 +209,13 @@ class ServerActions implements Runnable {
 
             if (registry.userExists( fromId ) == false) {
                 System.err.print ( "Unknown source id for \"recv\" request: " + data );
-                sendResult( null, "wrong parameters" );
+                sendResult( null, "\"wrong parameters\"" );
                 return;
             }
 
             if (registry.messageExists( fromId, msg.getAsString() ) == false) {
                 System.err.println ( "Unknown message for \"recv\" request: " + data );
-                sendResult( null, "wrong parameters" );
+                sendResult( null, "\"wrong parameters\"" );
                 return;
             }
 
@@ -236,7 +236,7 @@ class ServerActions implements Runnable {
 
             if (id == null || msg == null || receipt == null) {
                 System.err.print ( "Badly formated \"receipt\" request: " + data );
-                sendResult( null, "wrong request format" );
+                sendResult( null, "\"wrong request format\"" );
                 return;
             }
 
@@ -244,7 +244,7 @@ class ServerActions implements Runnable {
 
             if (registry.messageWasRed( fromId, msg.getAsString() ) == false) {
                 System.err.print ( "Unknown, or not yet red, message for \"receipt\" request: " + data );
-                sendResult( null, "wrong parameters" );
+                sendResult( null, "\"wrong parameters\"" );
                 return;
             }
 
@@ -262,7 +262,7 @@ class ServerActions implements Runnable {
 
             if (id == null || msg == null) {
                 System.err.print ( "Badly formated \"status\" request: " + data );
-                sendResult( null, "wrong request format" );
+                sendResult( null, "\"wrong request format\"" );
                 return;
             }
 
@@ -270,7 +270,7 @@ class ServerActions implements Runnable {
 
             if (registry.copyExists( fromId, msg.getAsString() ) == false) {
                 System.err.print ( "Unknown message for \"status\" request: " + data );
-                sendResult( null, "wrong parameters" );
+                sendResult( null, "\"wrong parameters\"" );
                 return;
             }
 
@@ -282,7 +282,7 @@ class ServerActions implements Runnable {
             return;
         }
 
-        sendResult( null, "Unknown request" );
+        sendResult( null, "\"Unknown request\"" );
         return;
     }
 
