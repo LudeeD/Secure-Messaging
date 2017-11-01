@@ -252,10 +252,11 @@ class ServerControl {
     }
 
     private int
-    newFile ( String basename ) {
+    newFile ( String path, String basename ) {
         for (int i = 1;; i++) {
-            File file = new File( basename + i );
-            if (file.exists() == false) {
+            File file1 = new File( path + basename + i );
+            File file2 = new File( path + "_" + basename + i );
+            if (file1.exists() == false && file2.exists() == false) {
                 return i;
             }
         }
@@ -268,9 +269,9 @@ class ServerControl {
         String path = null;
 
         try {
-            path = userMessageBox( dst ) + "/" + src + "_";
-            nr = newFile( path );
-            saveOnFile ( path + nr, msg );
+            path = userMessageBox( dst ) + "/";
+            nr = newFile( path, src + "_" );
+            saveOnFile ( path + src + "_" + nr, msg );
 
             result = "[\"" + src + "_" + nr + "\"";
 
@@ -289,14 +290,20 @@ class ServerControl {
 
         if (msg.charAt( 0 ) == '_') { // Already red
             path += msg;
-        } else { // Rename before reading
-            try {
-                File f = new File( path + msg );
+        } else {
+            File f = new File( path + "_" + msg );
+            if (f.exists()) {         // Already red  
                 path += "_" + msg;
-                f.renameTo ( new File ( path ) );
-            } catch (Exception e) {
-                System.err.println( "Cannot rename message file to " + path + ": " + e );
-                path = userMessageBox( id ) + "/" + msg;
+            }
+            else { // Rename before reading
+                try {
+                    f = new File( path + msg );
+                    path += "_" + msg;
+                    f.renameTo ( new File ( path ) );
+                } catch (Exception e) {
+                    System.err.println( "Cannot rename message file to " + path + ": " + e );
+                    path += msg; // Fall back to the non-renamed file
+                }
             }
         }
 

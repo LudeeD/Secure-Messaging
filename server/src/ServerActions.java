@@ -213,7 +213,8 @@ class ServerActions implements Runnable {
                 return;
             }
 
-            if (registry.messageExists( fromId, msg.getAsString() ) == false) {
+            if (registry.messageExists( fromId, msg.getAsString() ) == false &&
+                registry.messageExists( fromId, "_" + msg.getAsString() ) == false) {
                 System.err.println ( "Unknown message for \"recv\" request: " + data );
                 sendResult( null, "\"wrong parameters\"" );
                 return;
