@@ -85,7 +85,151 @@ class ClientActions{
             sendCommand("\"type\":\""+type+"\",\"uuid\":\""+uuid+"\"");
             return;
         }
+        // 2- List users’ messages boxes
+          if (opt == 2) {
+              String type = "list";
+              String id = "";
+              System.out.print("id: ");
+              try{
+                  id = br.readLine();
+              }catch(Exception e){
+                  System.err.print("Error reading Line");
+                  return;
+              }
+              sendCommand("\"type\":\""+type+"\",\"id\":\""+id+"\"");
+              return;
+          }
+        //  3- List new messages received by a user
+            if (opt == 3) {
+                String type = "new";
+                String id = "";
+                System.out.print("id: ");
+                try{
+                    id = br.readLine();
+                }catch(Exception e){
+                    System.err.print("Error reading Line");
+                    return;
+                }
+                sendCommand("\"type\":\""+type+"\",\"id\":\""+id+"\"");
+                return;
+            }
+            // 4- List all messages received by a user
+                if (opt == 4) {
+                    String type = "all";
+                    String id = "";
+                    System.out.print("id: ");
+                    try{
+                        id = br.readLine();
+                    }catch(Exception e){
+                        System.err.print("Error reading Line");
+                        return;
+                    }
+                    sendCommand("\"type\":\""+type+"\",\"id\":\""+id+"\"");
+                    return;
+                }
+                // 5 - Send message to a user
+                    if (opt == 5) {
+                        String type = "send";
+                        String srcid = "";
+                        String dst = "";
+                        String msg = "";
+                        String copy = "";
+                        System.out.print("srcid: ");
+                        try{
+                            srcid = br.readLine();
+                        }catch(Exception e){
+                            System.err.print("Error reading Line");
+                            return;
+                        }
+                        System.out.print("dst: ");
+                        try{
+                            dst = br.readLine();
+                        }catch(Exception e){
+                            System.err.print("Error reading Line");
+                            return;
+                        }
 
+                        System.out.print("msg: ");
+                        try{
+                            msg = br.readLine();
+                        }catch(Exception e){
+                            System.err.print("Error reading Line");
+                            return;
+                        }
+                        copy=msg;
+                      sendCommand("\"type\":\""+type+"\",\"src\":\""+srcid+"\",\"dst\":\""+dst+"\",\"msg\":\""+msg+"\",\"copy\":\""+copy+"\"");
+                        return;
+                    }
+                    // 6- Receive a message from a user message box
+                        if (opt == 6) {
+                            String type = "recv";
+                            String id = "";
+                            String msg = "";
+                            System.out.print("id: ");
+                            try{
+                                id = br.readLine();
+                            }catch(Exception e){
+                                System.err.print("Error reading Line");
+                                return;
+                            }
+                            System.out.print("msg id: ");
+                            try{
+                                msg = br.readLine();
+                            }catch(Exception e){
+                                System.err.print("Error reading Line");
+                                return;
+                            }
+                            sendCommand("\"type\":\""+type+"\",\"id\":\""+id+"\",\"msg\":\""+msg+"\"");
+                            return;
+                        }
+                        // 7-  Send receipt for a message
+                            if (opt == 7) {
+                                String type = "receipt";
+                                String id = "";
+                                String msg = "";
+                                String receipt = "";
+                                System.out.print("id: ");
+                                try{
+                                    id = br.readLine();
+                                }catch(Exception e){
+                                    System.err.print("Error reading Line");
+                                    return;
+                                }
+                                System.out.print("msg id: ");
+                                try{
+                                    msg = br.readLine();
+                                }catch(Exception e){
+                                    System.err.print("Error reading Line");
+                                    return;
+                                }
+                                System.out.print("calculating receipt... ");
+                                receipt="teste";
+                               sendCommand("\"type\":\""+type+"\",\"id\":\""+id+"\",\"msg\":\""+msg+"\",\"receipt\":\""+receipt+"\"");
+                                return;
+                            }
+                            // 8-  List messages sent and their receipts
+                                if (opt == 8) {
+                                    String type = "status";
+                                    String id = "";
+                                    String msg = "";
+                                    System.out.print("id: ");
+                                    try{
+                                        id = br.readLine();
+                                    }catch(Exception e){
+                                        System.err.print("Error reading Line");
+                                        return;
+                                    }
+                                    System.out.print("msg id: ");
+                                    try{
+                                        msg = br.readLine();
+                                    }catch(Exception e){
+                                        System.err.print("Error reading Line");
+                                        return;
+                                    }
+
+                                  sendCommand("\"type\":\""+type+"\",\"id\":\""+id+"\",\"msg\":\""+msg+"\"");
+                                    return;
+                                }
         // LIST
 
         //if (cmd.getAsString().equals( "list" )) {
@@ -327,4 +471,3 @@ class ClientActions{
     }
 
 }
-
