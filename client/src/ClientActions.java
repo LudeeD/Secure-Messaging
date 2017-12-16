@@ -18,14 +18,15 @@ class ClientActions{
     ClientActions ( Socket c ) {
         server = c;
         try {
+            CCOperations cc = new CCOperations();
+            cc.getUUID();
+
             in = new JsonReader(
                     new InputStreamReader ( c.getInputStream(), "UTF-8") );
             out = c.getOutputStream();
             br = new BufferedReader(new InputStreamReader(System.in));
-            CCOperations cc = new CCOperations();
-            cc.printAlias();
         } catch (Exception e) {
-            System.err.print( "Cannot use socket: " + e );
+            System.err.print( "Error initializing ClientActions: " + e );
             return;
         }
     }

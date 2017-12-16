@@ -5,7 +5,7 @@ import java.security.KeyStore;
 import java.security.PublicKey;
 import java.security.MessageDigest;
 import java.nio.charset.StandardCharsets;
-import java.io.FileInputStream;
+import java.io.*;
 import java.util.*;
 import java.security.cert.*;
 
@@ -121,8 +121,25 @@ class CCOperations{
     }
 
     void
-    getUUID () {
-        System.out.print("getUUID!");
+    getUUID() throws Exception{
+        System.out.println("getUUID!");
+        X509Certificate cac = (X509Certificate) ks.getCertificate("CITIZEN AUTHENTICATION CERTIFICATE");
+
+        File file = new File("teste");
+
+        byte[] buffer = cac.getEncoded();
+
+        FileOutputStream os = new FileOutputStream(file);
+        os.write(buffer);
+        os.close();
+
+        // TODO Encode to base 64 ?
+        //
+        //Writer wr = new OutputStreamWriter(os, StandardCharsets.UTF_8);
+        //wr.write( Base64.getEncoder().encodeToString(buffer) );
+        //wr.close();
+
+        return;
     }
     //void
     //sign() {
