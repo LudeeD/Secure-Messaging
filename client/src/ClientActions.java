@@ -14,11 +14,14 @@ class ClientActions{
     OutputStream out;
     BufferedReader br;
     CCOperations cc;
+    CryOperations cry;
 
     ClientActions ( Socket c ) {
         server = c;
         try {
-            CCOperations cc = new CCOperations();
+            //cc = new CCOperations();
+            cry = new CryOperations();
+            cry.generateKey();
 
             in = new JsonReader(
                     new InputStreamReader ( c.getInputStream(), "UTF-8") );
