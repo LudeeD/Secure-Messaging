@@ -1,11 +1,9 @@
 import java.util.Enumeration;
-import java.security.Security;
-import java.security.Provider;
-import java.security.KeyStore;
-import java.security.PublicKey;
-import java.security.MessageDigest;
+import java.security.*;
+import java.security.cert.Certificate;
 import java.nio.charset.StandardCharsets;
 import java.io.*;
+import java.nio.file.*;
 import java.util.*;
 import java.security.cert.*;
 
@@ -46,7 +44,6 @@ class CCOperations{
 
     boolean
     checkCertChain() throws Exception {
-        Certificate[] certs;
         X509Certificate cac = (X509Certificate) ks.getCertificate("CITIZEN AUTHENTICATION CERTIFICATE");
 
         //System.out.println("=== CAC ===\n");
@@ -129,22 +126,75 @@ class CCOperations{
 
         byte[] buffer = cac.getEncoded();
 
-        FileOutputStream os = new FileOutputStream(file);
-        os.write(buffer);
-        os.close();
+        //FileOutputStream os = new FileOutputStream(file);
+        //os.write(buffer);
+        //os.close();
 
-        // TODO Encode to base 64 ?
-        //
+        //// TODO Encode to base 64 ?
+
         //Writer wr = new OutputStreamWriter(os, StandardCharsets.UTF_8);
         //wr.write( Base64.getEncoder().encodeToString(buffer) );
         //wr.close();
 
+        try(FileOutputStream os = new FileOutputStream(file);Writer wr = new OutputStreamWriter(os, StandardCharsets.UTF_8);){
+            //os.write(buffer);
+            wr.write( Base64.getEncoder().encodeToString(buffer) );
+        }
+
         return;
     }
-    //void
-    //sign() {
 
-    //}
+    void
+    writeCert() throws Exception{
+        System.out.println("Write Cert");
+        String BEGIN_CERT = "-----BEGIN CERTIFICATE-----";
+        String END_CERT = "-----END CERTIFICATE-----";
+        String LINE_SEPARATOR = System.getProperty("line.separator");
+        Base64.Encoder encoder = Base64.getMimeEncoder(64, LINE_SEPARATOR.getBytes());
+        X509Certificate cac = (X509Certificate) ks.getCertificate("CITIZEN AUTHENTICATION CERTIFICATE");
+        byte[] buffer = cac.getEncoded();
+        String cert = BEGIN_CERT+LINE_SEPARATOR+new String(encoder.encode(buffer))+LINE_SEPARATOR+END_CERT;
+        Files.write(Paths.get("./teste2.pem"), cert.getBytes());
+        return;
+
+    }
+
+    void
+    readCert() throws Exception{
+        System.out.println("Read Cert");
+        CertificateFactory fact = CertificateFactory.getInstance("X.509");
+        InputStream is = Files.newInputStream(Paths.get("./teste2.pem"));
+        X509Certificate cer = (X509Certificate) fact.generateCertificate(is);
+        System.out.println(cer.toString());
+        return;
+    }
+
+
+    void
+    sign() throws Exception {
+        // Signature
+        System.out.println("Signature testing...");
+        Signature sign = Signature.getInstance("SHA256withRSA", "SunPKCS11-PTeID");
+        PrivateKey privKey = (PrivateKey) ks.getKey("CITIZEN AUTHENTICATION CERTIFICATE", null);
+        sign.initSign(privKey);
+        String teste = "teste";
+        System.out.println("Signing: " + teste);
+        sign.update(teste.getBytes());
+        byte[] signature = sign.sign();
+        System.out.println("Signature: " + signature);
+
+        // Verify
+        Signature verif = Signature.getInstance("SHA256withRSA"); // If I load the pkcs11 provider this will fail
+        Certificate cert = ks.getCertificate("CITIZEN AUTHENTICATION CERTIFICATE");
+        PublicKey pubK = cert.getPublicKey();
+        System.out.println(pubK);
+        verif.initVerify(pubK);
+        promptEnterKey();
+        verif.update(teste.getBytes());
+        boolean verification = verif.verify(signature);
+        System.out.print("Verification: "+verification);
+    }
+
     public static void
     promptEnterKey(){
         System.out.println("Press \"ENTER\" to continue...");

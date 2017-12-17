@@ -19,7 +19,6 @@ class ClientActions{
         server = c;
         try {
             CCOperations cc = new CCOperations();
-            cc.getUUID();
 
             in = new JsonReader(
                     new InputStreamReader ( c.getInputStream(), "UTF-8") );
