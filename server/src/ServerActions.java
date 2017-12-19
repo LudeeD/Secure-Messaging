@@ -15,11 +15,12 @@ class ServerActions implements Runnable {
     OutputStream out;
     ServerControl registry;
     DHSession session;
+    CryServerOperations cry;
 
     ServerActions ( Socket c, ServerControl r ) {
         client = c;
         registry = r;
-
+        cry = new CryServerOperations();
         try {
             in = new JsonReader( new InputStreamReader ( c.getInputStream(), "UTF-8") );
             out = c.getOutputStream();
@@ -81,8 +82,9 @@ class ServerActions implements Runnable {
         // SESSION
 
         if(cmd.getAsString().equals( "session" )){
-            String cert= "#TODO";
-            String sign= "#TODO";
+            String ln = System.getProperty("line.separator");
+            String cert;
+            String sign;
             String pubk;
             System.out.println("Establish Session (Server)");
             try{
@@ -90,6 +92,11 @@ class ServerActions implements Runnable {
                 pubk = data.get( "pubk" ).getAsString();
                 session.generateSecret(pubk);
                 pubk = session.getStringPubKey();
+                System.out.println("pubk =================\n"+pubk);
+                cert = cry.getCertString();
+                System.out.println("cert =================\n"+cert);
+                String toSign = pubk+ln+cert;
+                sign = cry.sign(toSign);
             }catch(Exception e){
                 System.err.print("Error Establishing Session " + e);
                 return;
@@ -98,7 +105,6 @@ class ServerActions implements Runnable {
                             "\"pubk\":\""+pubk+"\","+
                             "\"cert\":\""+cert+"\","+
                             "\"signature\":\""+sign+"\"",null);
- 
             return;
         }
 
