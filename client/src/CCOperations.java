@@ -20,12 +20,8 @@ class CCOperations{
             System.out.println("Addedd provider");
             ks = KeyStore.getInstance( "PKCS11", "SunPKCS11-PTeID");
             ks.load(null, null);
-
-            //MessageDigest digest = MessageDigest.getInstance("SHA-256", "SunPKCS11-PTeID");
-            //byte[] hash = digest.digest(toHash.getBytes(StandardCharsets.UTF_8));
-            //System.out.print(hash);
         }catch(Exception e){
-            System.err.println(e);
+            System.err.println("Error in CC Operations "+e);
         }
     }
 
@@ -117,31 +113,25 @@ class CCOperations{
         return true;
     }
 
-    void
+
+    String
     getUUID() throws Exception{
         System.out.println("getUUID!");
         X509Certificate cac = (X509Certificate) ks.getCertificate("CITIZEN AUTHENTICATION CERTIFICATE");
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        byte[] hash = digest.digest(cac.getEncoded());
+        return Base64.getEncoder().encodeToString(hash);
+    }
 
-        File file = new File("teste");
-
+    String
+    getCertString() throws Exception{
+        String BEGIN_CERT = "-----BEGIN CERTIFICATE-----";
+        String END_CERT = "-----END CERTIFICATE-----";
+        String LINE_SEPARATOR = System.getProperty("line.separator");
+        Base64.Encoder encoder = Base64.getEncoder();
+        X509Certificate cac = (X509Certificate) ks.getCertificate("CITIZEN AUTHENTICATION CERTIFICATE");
         byte[] buffer = cac.getEncoded();
-
-        //FileOutputStream os = new FileOutputStream(file);
-        //os.write(buffer);
-        //os.close();
-
-        //// TODO Encode to base 64 ?
-
-        //Writer wr = new OutputStreamWriter(os, StandardCharsets.UTF_8);
-        //wr.write( Base64.getEncoder().encodeToString(buffer) );
-        //wr.close();
-
-        try(FileOutputStream os = new FileOutputStream(file);Writer wr = new OutputStreamWriter(os, StandardCharsets.UTF_8);){
-            //os.write(buffer);
-            wr.write( Base64.getEncoder().encodeToString(buffer) );
-        }
-
-        return;
+        return BEGIN_CERT+LINE_SEPARATOR+new String(encoder.encode(buffer))+LINE_SEPARATOR+END_CERT;
     }
 
     void
@@ -170,29 +160,27 @@ class CCOperations{
     }
 
 
-    void
-    sign() throws Exception {
-        // Signature
-        System.out.println("Signature testing...");
+    String
+    sign(String toSign) throws Exception {
+        System.out.println("Signing...");
         Signature sign = Signature.getInstance("SHA256withRSA", "SunPKCS11-PTeID");
         PrivateKey privKey = (PrivateKey) ks.getKey("CITIZEN AUTHENTICATION CERTIFICATE", null);
         sign.initSign(privKey);
-        String teste = "teste";
-        System.out.println("Signing: " + teste);
-        sign.update(teste.getBytes());
+        sign.update(toSign.getBytes());
         byte[] signature = sign.sign();
-        System.out.println("Signature: " + signature);
+        //System.out.println("Signature: " + signature);
+        return Base64.getEncoder().encodeToString(signature);
 
         // Verify
-        Signature verif = Signature.getInstance("SHA256withRSA"); // If I load the pkcs11 provider this will fail
-        Certificate cert = ks.getCertificate("CITIZEN AUTHENTICATION CERTIFICATE");
-        PublicKey pubK = cert.getPublicKey();
-        System.out.println(pubK);
-        verif.initVerify(pubK);
-        promptEnterKey();
-        verif.update(teste.getBytes());
-        boolean verification = verif.verify(signature);
-        System.out.print("Verification: "+verification);
+        //Signature verif = Signature.getInstance("SHA256withRSA"); // If I load the pkcs11 provider this will fail
+        //Certificate cert = ks.getCertificate("CITIZEN AUTHENTICATION CERTIFICATE");
+        //PublicKey pubK = cert.getPublicKey();
+        //System.out.println(pubK);
+        //verif.initVerify(pubK);
+        //promptEnterKey();
+        //verif.update(teste.getBytes());
+        //boolean verification = verif.verify(signature);
+        //System.out.print("Verification: "+verification);
     }
 
     public static void

@@ -14,6 +14,7 @@ class ServerActions implements Runnable {
     JsonReader in;
     OutputStream out;
     ServerControl registry;
+    DHSession session;
 
     ServerActions ( Socket c, ServerControl r ) {
         client = c;
@@ -75,6 +76,29 @@ class ServerActions implements Runnable {
 
         if (cmd == null) {
             System.err.println ( "Invalid command in request: " + data );
+            return;
+        }
+        // SESSION
+
+        if(cmd.getAsString().equals( "session" )){
+            String cert= "#TODO";
+            String sign= "#TODO";
+            String pubk;
+            System.out.println("Establish Session (Server)");
+            try{
+                session = new DHSession();
+                pubk = data.get( "pubk" ).getAsString();
+                session.generateSecret(pubk);
+                pubk = session.getStringPubKey();
+            }catch(Exception e){
+                System.err.print("Error Establishing Session " + e);
+                return;
+            }
+            sendResult(    "\"Result\":\"Success\","+
+                            "\"pubk\":\""+pubk+"\","+
+                            "\"cert\":\""+cert+"\","+
+                            "\"signature\":\""+sign+"\"",null);
+ 
             return;
         }
 

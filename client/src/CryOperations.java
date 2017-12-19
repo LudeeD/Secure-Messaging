@@ -51,6 +51,13 @@ class CryOperations{
             return kf.generatePrivate(ks);
         }
     }
+
+    String
+    getKeyString(boolean pub, String path) throws Exception{
+        Key k = readKey(pub, path);
+        return Base64.getEncoder().encodeToString(k.getEncoded());
+    }
+
     // Test Function Only
     public static void
     promptEnterKey(){
