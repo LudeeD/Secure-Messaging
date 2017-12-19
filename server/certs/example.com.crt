@@ -1,0 +1,100 @@
+Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number: 1 (0x1)
+    Signature Algorithm: sha256WithRSAEncryption
+        Issuer: C=PT, ST=Aveiro, L=Aveiro, O=University of Aveiro, OU=DETI, CN=Server CA/name=Server CA/emailAddress=serverca@ua.pt
+        Validity
+            Not Before: Dec 19 17:50:55 2017 GMT
+            Not After : Dec 17 17:50:55 2027 GMT
+        Subject: C=PT, ST=Aveiro, L=Aveiro, O=University of Aveiro, OU=DETI, CN=Server Cert/name=ServerCert/emailAddress=server@ua.pt
+        Subject Public Key Info:
+            Public Key Algorithm: rsaEncryption
+                Public-Key: (2048 bit)
+                Modulus:
+                    00:b1:7c:a6:3d:44:07:c6:6b:31:b2:e6:7d:c8:7c:
+                    72:22:b4:75:13:6f:45:54:27:00:e3:68:8f:84:59:
+                    f5:37:c7:32:2b:6c:91:6c:47:39:36:a8:a6:93:5b:
+                    9e:d7:be:d5:f4:49:be:3f:57:45:1e:ac:10:07:ac:
+                    1f:55:d8:5a:aa:64:8d:c2:82:eb:74:c7:19:72:93:
+                    bc:01:13:22:8a:ac:19:d6:c0:08:20:7e:a8:c3:27:
+                    02:9d:43:f2:9e:66:7a:a0:9a:c8:ad:ea:88:2a:fe:
+                    ac:d7:07:0a:ed:86:7e:75:66:23:ac:af:8f:3f:a7:
+                    ea:76:5e:5d:94:c4:7b:be:c4:cb:52:ee:3f:1a:18:
+                    30:54:57:98:57:9a:ff:13:90:62:0e:1d:b4:4c:29:
+                    a8:7a:2e:74:d9:d6:ea:5c:08:61:b7:8e:0f:d3:10:
+                    07:2c:53:4b:97:83:1c:a0:5a:a7:a2:db:df:50:79:
+                    e8:44:6c:18:93:28:4e:9c:ad:38:e9:7f:a9:8a:b3:
+                    ec:ba:38:3a:c2:22:46:49:a8:b1:74:a5:dd:36:cc:
+                    e9:87:d9:3c:0d:b6:35:e4:18:39:46:78:2c:42:d8:
+                    58:9f:ff:02:fb:ac:06:3f:61:22:42:a1:d9:0c:c1:
+                    27:b8:bb:4e:d2:7a:b0:8b:5e:73:2e:82:eb:04:6a:
+                    d2:d3
+                Exponent: 65537 (0x10001)
+        X509v3 extensions:
+            X509v3 Basic Constraints: 
+                CA:FALSE
+            Netscape Cert Type: 
+                SSL Server
+            Netscape Comment: 
+                Easy-RSA Generated Server Certificate
+            X509v3 Subject Key Identifier: 
+                50:4B:3B:55:12:1D:47:9B:EA:C6:F7:CE:11:E3:69:7B:2F:AF:24:4A
+            X509v3 Authority Key Identifier: 
+                keyid:A7:06:33:21:DA:60:75:44:1D:22:A0:E3:91:91:B6:86:63:AA:24:E4
+                DirName:/C=PT/ST=Aveiro/L=Aveiro/O=University of Aveiro/OU=DETI/CN=Server CA/name=Server CA/emailAddress=serverca@ua.pt
+                serial:BD:6F:60:E2:8F:33:A4:9F
+
+            X509v3 Extended Key Usage: 
+                TLS Web Server Authentication
+            X509v3 Key Usage: 
+                Digital Signature, Key Encipherment
+            X509v3 Subject Alternative Name: 
+                DNS:example.com
+    Signature Algorithm: sha256WithRSAEncryption
+         0c:dc:3b:1e:02:51:4d:22:d2:2f:90:6b:54:f1:f9:f3:a8:64:
+         2e:85:f6:8e:a8:13:16:46:8c:53:66:61:57:23:49:55:17:ac:
+         7c:50:d3:ed:14:7c:5d:05:38:9a:ea:84:b2:ce:40:9c:5d:76:
+         16:9a:76:d6:f6:5e:e5:67:c4:fc:58:5f:03:b7:22:e6:80:79:
+         09:38:4a:58:34:90:2d:78:75:1b:36:c3:7d:f4:4a:9c:66:f1:
+         73:c1:07:fc:ad:98:da:ee:53:64:b6:98:f7:94:0d:2f:97:fd:
+         7a:f4:d4:2c:67:76:9b:e7:b7:ba:41:c6:d5:c6:4f:6a:0f:0a:
+         a0:f1:99:7b:95:bd:64:f7:63:86:c2:b5:f7:b4:13:67:2f:cb:
+         45:11:80:b7:92:77:9f:42:fc:52:d3:49:9e:ba:b9:57:80:2d:
+         37:bf:01:66:84:1a:d9:a2:93:38:80:cf:95:53:51:b9:0b:46:
+         93:0b:13:5b:07:47:7c:ab:8c:dc:6c:41:32:43:92:af:95:e7:
+         fb:01:50:2b:92:7a:d9:2c:6e:65:bf:8a:54:2e:1d:b4:19:68:
+         41:da:46:e8:3b:7d:1e:85:5a:b6:ed:07:93:98:5f:5b:6e:71:
+         30:81:87:b1:55:39:28:d2:61:83:f6:1d:62:be:9f:24:65:45:
+         24:8c:90:8b
+-----BEGIN CERTIFICATE-----
+MIIFVTCCBD2gAwIBAgIBATANBgkqhkiG9w0BAQsFADCBpDELMAkGA1UEBhMCUFQx
+DzANBgNVBAgTBkF2ZWlybzEPMA0GA1UEBxMGQXZlaXJvMR0wGwYDVQQKExRVbml2
+ZXJzaXR5IG9mIEF2ZWlybzENMAsGA1UECxMEREVUSTESMBAGA1UEAxMJU2VydmVy
+IENBMRIwEAYDVQQpEwlTZXJ2ZXIgQ0ExHTAbBgkqhkiG9w0BCQEWDnNlcnZlcmNh
+QHVhLnB0MB4XDTE3MTIxOTE3NTA1NVoXDTI3MTIxNzE3NTA1NVowgaUxCzAJBgNV
+BAYTAlBUMQ8wDQYDVQQIEwZBdmVpcm8xDzANBgNVBAcTBkF2ZWlybzEdMBsGA1UE
+ChMUVW5pdmVyc2l0eSBvZiBBdmVpcm8xDTALBgNVBAsTBERFVEkxFDASBgNVBAMT
+C1NlcnZlciBDZXJ0MRMwEQYDVQQpEwpTZXJ2ZXJDZXJ0MRswGQYJKoZIhvcNAQkB
+FgxzZXJ2ZXJAdWEucHQwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCx
+fKY9RAfGazGy5n3IfHIitHUTb0VUJwDjaI+EWfU3xzIrbJFsRzk2qKaTW57XvtX0
+Sb4/V0UerBAHrB9V2FqqZI3Cgut0xxlyk7wBEyKKrBnWwAggfqjDJwKdQ/KeZnqg
+msit6ogq/qzXBwrthn51ZiOsr48/p+p2Xl2UxHu+xMtS7j8aGDBUV5hXmv8TkGIO
+HbRMKah6LnTZ1upcCGG3jg/TEAcsU0uXgxygWqei299QeehEbBiTKE6crTjpf6mK
+s+y6ODrCIkZJqLF0pd02zOmH2TwNtjXkGDlGeCxC2Fif/wL7rAY/YSJCodkMwSe4
+u07SerCLXnMugusEatLTAgMBAAGjggGNMIIBiTAJBgNVHRMEAjAAMBEGCWCGSAGG
++EIBAQQEAwIGQDA0BglghkgBhvhCAQ0EJxYlRWFzeS1SU0EgR2VuZXJhdGVkIFNl
+cnZlciBDZXJ0aWZpY2F0ZTAdBgNVHQ4EFgQUUEs7VRIdR5vqxvfOEeNpey+vJEow
+gdkGA1UdIwSB0TCBzoAUpwYzIdpgdUQdIqDjkZG2hmOqJOShgaqkgacwgaQxCzAJ
+BgNVBAYTAlBUMQ8wDQYDVQQIEwZBdmVpcm8xDzANBgNVBAcTBkF2ZWlybzEdMBsG
+A1UEChMUVW5pdmVyc2l0eSBvZiBBdmVpcm8xDTALBgNVBAsTBERFVEkxEjAQBgNV
+BAMTCVNlcnZlciBDQTESMBAGA1UEKRMJU2VydmVyIENBMR0wGwYJKoZIhvcNAQkB
+Fg5zZXJ2ZXJjYUB1YS5wdIIJAL1vYOKPM6SfMBMGA1UdJQQMMAoGCCsGAQUFBwMB
+MAsGA1UdDwQEAwIFoDAWBgNVHREEDzANggtleGFtcGxlLmNvbTANBgkqhkiG9w0B
+AQsFAAOCAQEADNw7HgJRTSLSL5BrVPH586hkLoX2jqgTFkaMU2ZhVyNJVResfFDT
+7RR8XQU4muqEss5AnF12Fpp21vZe5WfE/FhfA7ci5oB5CThKWDSQLXh1GzbDffRK
+nGbxc8EH/K2Y2u5TZLaY95QNL5f9evTULGd2m+e3ukHG1cZPag8KoPGZe5W9ZPdj
+hsK197QTZy/LRRGAt5J3n0L8UtNJnrq5V4AtN78BZoQa2aKTOIDPlVNRuQtGkwsT
+WwdHfKuM3GxBMkOSr5Xn+wFQK5J62SxuZb+KVC4dtBloQdpG6Dt9HoVatu0Hk5hf
+W25xMIGHsVU5KNJhg/YdYr6fJGVFJIyQiw==
+-----END CERTIFICATE-----
