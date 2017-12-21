@@ -12,7 +12,7 @@ class DHSession{
     DHSession() throws Exception{
         System.out.println("Diffie Helman Session Key Exchange");
         KeyPairGenerator kpg = KeyPairGenerator.getInstance("DH");
-        kpg.initialize(2048);
+        kpg.initialize(512);
         kp = kpg.generateKeyPair();
 
 
@@ -33,6 +33,12 @@ class DHSession{
         PublicKey friendPubK = keyFac.generatePublic(x509KeySpec);
         ka.doPhase(friendPubK, true);
         sharedSecret = ka.generateSecret();
-        //System.out.println("secret: " + Base64.getEncoder().encodeToString(sharedSecret));
+        System.out.println("secret: " + sharedSecret.length);
+    }
+
+    byte[]
+    getSharedSecret(){
+        return sharedSecret;
     }
 }
+
