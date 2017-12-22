@@ -1,39 +1,47 @@
 import java.util.*;
 import java.security.*;
 import java.security.spec.*;
-import javax.crypto.KeyAgreement;
+import javax.crypto.*;
+import javax.crypto.spec.*;
+import javax.crypto.interfaces.*;
 
 class DHSession{
 
     KeyAgreement ka;
     KeyPair kp;
     byte[] sharedSecret = null;
+    PublicKey friendPubK;
 
-    DHSession() throws Exception{
-        System.out.println("Diffie Helman Session Key Exchange");
-        KeyPairGenerator kpg = KeyPairGenerator.getInstance("DH");
-        kpg.initialize(512);
-        kp = kpg.generateKeyPair();
+    DHSession( String pubK ) throws Exception{
+        System.out.println("Diffie Helman Session Key Exchange Server");
 
+        byte[] pubKenc = Base64.getDecoder().decode(pubK);
+        KeyFactory keyFac = KeyFactory.getInstance("DH");
+        X509EncodedKeySpec x509KeySpec = new X509EncodedKeySpec(pubKenc);
+        friendPubK = keyFac.generatePublic(x509KeySpec);
+        DHParameterSpec dhParam = ((DHPublicKey)friendPubK).getParams();
+
+        KeyPairGenerator KG = KeyPairGenerator.getInstance("DH");
+        KG.initialize(dhParam);
+        kp = KG.generateKeyPair();
 
         ka = KeyAgreement.getInstance("DH");
         ka.init(kp.getPrivate());
     }
 
+
     String
     getStringPubKey() throws Exception{
+        //System.out.println("Sent Pubk " +kp.getPublic());
         return Base64.getEncoder().encodeToString(kp.getPublic().getEncoded());
     }
 
     void
-    generateSecret( String pubK ) throws Exception{
-        byte[] pubKenc = Base64.getDecoder().decode(pubK);
-        KeyFactory keyFac = KeyFactory.getInstance("DH");
-        X509EncodedKeySpec x509KeySpec = new X509EncodedKeySpec(pubKenc);
-        PublicKey friendPubK = keyFac.generatePublic(x509KeySpec);
+    generateSecret(  ) throws Exception{
+        //System.out.println(friendPubK);
         ka.doPhase(friendPubK, true);
         sharedSecret = ka.generateSecret();
-        System.out.println("secret: " + sharedSecret.length);
+        //System.out.println("secret: " + Base64.getEncoder().encodeToString(sharedSecret));
     }
 
     byte[]

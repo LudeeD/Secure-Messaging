@@ -1,3 +1,4 @@
+import java.util.*;
 import java.lang.Thread;
 import java.net.Socket;
 import java.io.OutputStream;
@@ -14,13 +15,14 @@ class ServerActions implements Runnable {
     JsonReader in;
     OutputStream out;
     ServerControl registry;
-    DHSession session;
+    DHSession session = null;
     CryServerOperations cry;
 
-    ServerActions ( Socket c, ServerControl r ) {
+    ServerActions ( Socket c, ServerControl r ) throws Exception{
         client = c;
         registry = r;
         cry = new CryServerOperations();
+
         try {
             in = new JsonReader( new InputStreamReader ( c.getInputStream(), "UTF-8") );
             out = c.getOutputStream();
@@ -32,10 +34,14 @@ class ServerActions implements Runnable {
 
     JsonObject
     readCommand () {
+        System.out.println("Reading Command..");
         try {
             JsonElement data = new JsonParser().parse( in );
-            if (data.isJsonObject()) {
+            if (session == null && data.isJsonObject()){
                 return data.getAsJsonObject();
+            }
+            if (data.isJsonObject()) {
+                return cry.processPayloadRecv(data.getAsJsonObject(),session.getSharedSecret());
             }
             System.err.print ( "Error while reading command from socket (not a JSON object), connection will be shutdown\n" );
             return null;
@@ -47,27 +53,35 @@ class ServerActions implements Runnable {
     }
 
     void
-    sendResult ( String result, String error ) {
+    sendResult ( String result, String error, boolean sessionInit ) {
         String msg = "{";
-
         // Usefull result
-
         if (result != null) {
             msg += result;
         }
-
         // error message
-
         if (error != null) {
             msg += "\"error\":" + error;
         }
-
         msg += "}\n";
 
-        try {
-            System.out.print( "Send result: " + msg );
+        try{
+            if( !sessionInit ){
+                String[] results = cry.processPayloadSend(msg, session.getSharedSecret());
+
+                msg  = "{"+         "\"type\":\"payload\","+
+                                    "\"payload\":\""+results[0]+"\","+
+                                    "\"iv\":\""+results[1]+"\"," +
+                                    "\"mac\":\""+results[2]+"\""+
+                            "}";
+            }
+
+            System.out.println( "Send result: " + msg );
             out.write ( msg.getBytes( StandardCharsets.UTF_8 ) );
-        } catch (Exception e ) {}
+            System.out.println("Sent!!!");
+        }catch (Exception e){
+            System.err.print ( "Error while sending response to socket");
+        }
     }
 
     void
@@ -83,20 +97,20 @@ class ServerActions implements Runnable {
 
         if(cmd.getAsString().equals( "session" )){
             String ln = System.getProperty("line.separator");
-            String cert;
-            String sign;
+            String cert = "";
+            String sign = "";
             String pubk;
             System.out.println("Establish Session (Server)");
             try{
-                session = new DHSession();
                 pubk = data.get( "pubk" ).getAsString();
-                session.generateSecret(pubk);
+                session = new DHSession(pubk);
+
                 pubk = session.getStringPubKey();
-                System.out.println("pubk =================\n"+pubk);
-                cert = cry.getCertString();
-                System.out.println("cert =================\n"+cert);
-                String toSign = pubk+ln+cert;
-                sign = cry.sign(toSign);
+                //cert = cry.getCertString();
+                //String toSign = pubk+ln+cert;
+                //sign = cry.sign(toSign);
+
+                session.generateSecret();
             }catch(Exception e){
                 System.err.print("Error Establishing Session " + e);
                 return;
@@ -104,7 +118,8 @@ class ServerActions implements Runnable {
             sendResult(    "\"Result\":\"Success\","+
                             "\"pubk\":\""+pubk+"\","+
                             "\"cert\":\""+cert+"\","+
-                            "\"signature\":\""+sign+"\"",null);
+                            "\"signature\":\""+sign+"\"",null, true);
+
             return;
         }
 
@@ -115,20 +130,20 @@ class ServerActions implements Runnable {
 
             if (uuid == null) {
                 System.err.print ( "No \"uuid\" field in \"create\" request: " + data );
-                sendResult( null, "\"wrong request format\"" );
+                sendResult( null, "\"wrong request format\"" , false);
                 return;
             }
 
             if (registry.userExists( uuid.getAsString() )) {
                 System.err.println ( "User already exists: " + data );
-                sendResult( null, "\"uuid already exists\"" );
+                sendResult( null, "\"uuid already exists\"" , false);
                 return;
             }
 
             data.remove ( "type" );
             me = registry.addUser( data );
 
-            sendResult( "\"result\":\"" + me.id + "\"", null );
+            sendResult( "\"result\":\"" + me.id + "\"", null , false);
             return;
         }
 
@@ -147,7 +162,7 @@ class ServerActions implements Runnable {
 
             list = registry.listUsers( user );
 
-            sendResult( "\"data\":" + (list == null ? "[]" : list), null );
+            sendResult( "\"data\":" + (list == null ? "[]" : list), null , false);
             return;
         }
 
@@ -159,11 +174,11 @@ class ServerActions implements Runnable {
 
             if (id == null || user <= 0) {
                 System.err.print ( "No valid \"id\" field in \"new\" request: " + data );
-                sendResult( null, "\"wrong request format\"" );
+                sendResult( null, "\"wrong request format\"" , false);
                 return;
             }
 
-            sendResult( "\"result\":" + registry.userNewMessages( user ), null );
+            sendResult( "\"result\":" + registry.userNewMessages( user ), null , false);
             return;
         }
 
@@ -175,12 +190,12 @@ class ServerActions implements Runnable {
 
             if (id == null || user <= 0) {
                 System.err.print ( "No valid \"id\" field in \"new\" request: " + data );
-                sendResult( null, "\"wrong request format\"" );
+                sendResult( null, "\"wrong request format\"" , false);
                 return;
             }
 
             sendResult( "\"result\":[" + registry.userAllMessages( user ) + "," +
-                        registry.userSentMessages( user ) + "]", null );
+                        registry.userSentMessages( user ) + "]", null , false);
             return;
         }
 
@@ -194,7 +209,7 @@ class ServerActions implements Runnable {
 
             if (src == null || dst == null || msg == null || copy == null) {
                 System.err.print ( "Badly formated \"send\" request: " + data );
-                sendResult( null, "\"wrong request format\"" );
+                sendResult( null, "\"wrong request format\"" , false);
                 return;
             }
 
@@ -203,13 +218,13 @@ class ServerActions implements Runnable {
 
             if (registry.userExists( srcId ) == false) {
                 System.err.print ( "Unknown source id for \"send\" request: " + data );
-                sendResult( null, "\"wrong parameters\"" );
+                sendResult( null, "\"wrong parameters\"" , false);
                 return;
             }
 
             if (registry.userExists( dstId ) == false) {
                 System.err.print ( "Unknown destination id for \"send\" request: " + data );
-                sendResult( null, "\"wrong parameters\"" );
+                sendResult( null, "\"wrong parameters\"" , false);
                 return;
             }
 
@@ -219,7 +234,7 @@ class ServerActions implements Runnable {
                                                     msg.getAsString(),
                                                     copy.getAsString() );
 
-            sendResult( "\"result\":" + response, null );
+            sendResult( "\"result\":" + response, null , false);
             return;
         }
 
@@ -231,7 +246,7 @@ class ServerActions implements Runnable {
 
             if (id == null || msg == null) {
                 System.err.print ( "Badly formated \"recv\" request: " + data );
-                sendResult( null, "\"wrong request format\"" );
+                sendResult( null, "\"wrong request format\"" , false);
                 return;
             }
 
@@ -239,14 +254,14 @@ class ServerActions implements Runnable {
 
             if (registry.userExists( fromId ) == false) {
                 System.err.print ( "Unknown source id for \"recv\" request: " + data );
-                sendResult( null, "\"wrong parameters\"" );
+                sendResult( null, "\"wrong parameters\"" , false);
                 return;
             }
 
             if (registry.messageExists( fromId, msg.getAsString() ) == false &&
                 registry.messageExists( fromId, "_" + msg.getAsString() ) == false) {
                 System.err.println ( "Unknown message for \"recv\" request: " + data );
-                sendResult( null, "\"wrong parameters\"" );
+                sendResult( null, "\"wrong parameters\"" , false);
                 return;
             }
 
@@ -254,7 +269,7 @@ class ServerActions implements Runnable {
 
             String response = registry.recvMessage( fromId, msg.getAsString() );
 
-            sendResult( "\"result\":" + response, null );
+            sendResult( "\"result\":" + response, null , false);
             return;
         }
 
@@ -267,7 +282,7 @@ class ServerActions implements Runnable {
 
             if (id == null || msg == null || receipt == null) {
                 System.err.print ( "Badly formated \"receipt\" request: " + data );
-                sendResult( null, "\"wrong request format\"" );
+                sendResult( null, "\"wrong request format\"" , false);
                 return;
             }
 
@@ -275,7 +290,7 @@ class ServerActions implements Runnable {
 
             if (registry.messageWasRed( fromId, msg.getAsString() ) == false) {
                 System.err.print ( "Unknown, or not yet red, message for \"receipt\" request: " + data );
-                sendResult( null, "\"wrong parameters\"" );
+                sendResult( null, "\"wrong parameters\"" , false);
                 return;
             }
 
@@ -293,7 +308,7 @@ class ServerActions implements Runnable {
 
             if (id == null || msg == null) {
                 System.err.print ( "Badly formated \"status\" request: " + data );
-                sendResult( null, "\"wrong request format\"" );
+                sendResult( null, "\"wrong request format\"" , false);
                 return;
             }
 
@@ -301,7 +316,7 @@ class ServerActions implements Runnable {
 
             if (registry.copyExists( fromId, msg.getAsString() ) == false) {
                 System.err.print ( "Unknown message for \"status\" request: " + data );
-                sendResult( null, "\"wrong parameters\"" );
+                sendResult( null, "\"wrong parameters\"" , false);
                 return;
             }
 
@@ -309,11 +324,11 @@ class ServerActions implements Runnable {
 
             String response = registry.getReceipts( fromId, msg.getAsString() );
 
-            sendResult( "\"result\":" + response, null );
+            sendResult( "\"result\":" + response, null , false);
             return;
         }
 
-        sendResult( null, "\"Unknown request\"" );
+        sendResult( null, "\"Unknown request\"" , false);
         return;
     }
 

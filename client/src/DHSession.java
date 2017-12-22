@@ -14,14 +14,13 @@ class DHSession{
         KeyPairGenerator kpg = KeyPairGenerator.getInstance("DH");
         kpg.initialize(512);
         kp = kpg.generateKeyPair();
-
-
         ka = KeyAgreement.getInstance("DH");
         ka.init(kp.getPrivate());
     }
 
     String
     getStringPubKey() throws Exception{
+        //System.out.println("Sent Pubk " +kp.getPublic());
         return Base64.getEncoder().encodeToString(kp.getPublic().getEncoded());
     }
 
@@ -31,9 +30,10 @@ class DHSession{
         KeyFactory keyFac = KeyFactory.getInstance("DH");
         X509EncodedKeySpec x509KeySpec = new X509EncodedKeySpec(pubKenc);
         PublicKey friendPubK = keyFac.generatePublic(x509KeySpec);
+        //System.out.println(friendPubK);
         ka.doPhase(friendPubK, true);
         sharedSecret = ka.generateSecret();
-        System.out.println("secret: " + sharedSecret.length);
+        //System.out.println("secret: " + Base64.getEncoder().encodeToString(sharedSecret));
     }
 
     byte[]
