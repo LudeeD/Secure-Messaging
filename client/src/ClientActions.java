@@ -243,7 +243,7 @@ class ClientActions{
                 return false;
             }
 
-            sendCommand("\"type\":\""+type+"\",\"src\":\""+srcid+"\",\"dst\":\""+dst+"\",\"msg\":\""+msgEnc+"\",\"copy\":\""+msgEnc+"\"");
+            sendCommand("\"type\":\""+type+"\",\"src\":\""+srcid+"\",\"dst\":\""+dst+"\",\"msg\":\""+aesKeyEnc +"\n"+msgEnc+"\n"+"\",\"copy\":\""+aesKeyEnc +"\n"+msgEnc+"\n"+"\"");
             return true;
         }
         // 6- Receive a message from a user message box
