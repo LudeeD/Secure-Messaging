@@ -14,7 +14,7 @@ class ClientActions{
     BufferedReader br;
     CCOperations cc;
     CryOperations cry;
-    DHSession session;
+    DHSession session = null;
 
     ClientActions ( Socket c ) {
         server = c;
@@ -36,34 +36,48 @@ class ClientActions{
 
     void
     readResponse () {
+    System.out.println("Reading Response..");
         try {
             JsonElement data = new JsonParser().parse( in );
-            if (data.isJsonObject()) {
-                System.out.print(data.toString());
-                return;
+            if (session == null && data.isJsonObject()){
+                System.out.println(data.getAsJsonObject());
             }
-            System.err.print ( "Error while reading response from socket (not a JSON object), connection will be shutdown\n" );
-            return;
+            if (data.isJsonObject()) {
+                System.out.println(cry.processPayloadRecv(data.getAsJsonObject(),session.getSharedSecret()));
+            }
+            //System.err.print ( "Error while reading command from socket (not a JSON object), connection will be shutdown\n" );
         } catch (Exception e) {
-            System.err.print ( "Error while reading JSON response from socket, connection will be shutdown\n"+e);
-            return;
+            System.err.print ( "Error while reading JSON command from socket, connection will be shutdown\n" );
         }
-    }
+
+   }
+
 
     void
-    sendCommand ( String cmd ) {
-        String msg = "{";
+    sendCommand ( String cmd, boolean sessionInit ) {
 
+        String msg = "{";
         if (cmd != null) {
             msg += cmd;
         }
 
         msg += "}\n";
 
-        try {
-            System.out.print( "Send cmd: " + msg );
+        try{
+            if( !sessionInit ){
+                String[] result = cry.processPayloadSend(msg, session.getSharedSecret());
+
+                msg  = "{"+         "\"type\":\"payload\","+
+                                    "\"payload\":\""+result[0]+"\","+
+                                    "\"iv\":\""+result[1]+"\"," +
+                                    "\"mac\":\""+result[2]+"\""+
+                            "}";
+            }
+
+            System.out.println( "Send cmd: " + msg );
             out.write ( msg.getBytes( StandardCharsets.UTF_8 ) );
-        } catch (Exception e ) {
+            System.out.println("Sent!!!!");
+        }catch (Exception e){
             System.err.print ( "Error while sending cmd to socket");
         }
     }
@@ -81,14 +95,14 @@ class ClientActions{
             String type = "session";
             String ln = System.getProperty("line.separator");
             String pubk;
-            String cert;
-            String sign;
+            String cert = "";
+            String sign = "";
             try{
                 session = new DHSession();
                 pubk = session.getStringPubKey();
-                cert = cc.getCertString();
-                String toSign = pubk+ln+cert;
-                sign = cc.sign(toSign);
+                //cert = cc.getCertString();
+                //String toSign = pubk+ln+cert;
+                //sign = cc.sign(toSign);
             }catch(Exception e){
                 System.err.print("Error Establishing Session " + e);
                 return false;
@@ -97,7 +111,7 @@ class ClientActions{
             sendCommand(    "\"type\":\""+type+"\","+
                             "\"pubk\":\""+pubk+"\","+
                             "\"cert\":\""+cert+"\","+
-                            "\"signature\":\""+sign+"\"");
+                            "\"signature\":\""+sign+"\"", true);
 
             try{
                 JsonObject data = new JsonParser().parse( in ).getAsJsonObject();
@@ -107,7 +121,7 @@ class ClientActions{
                 System.err.print("Error Establishing Session 2" + e);
                 return false;
             }
-           return false;
+            return false;
         }
 
         // 1- Create new User
@@ -118,13 +132,13 @@ class ClientActions{
             String uuid;
             String pubk;
             String cert;
-            String sign;
+            String sign = "";
             try{
                 uuid = cc.getUUID();
                 pubk = cry.getKeyString(true, "./luis.pub");
                 cert = cc.getCertString();
                 String toSign = uuid+ln+pubk+ln+cert;
-                sign = cc.sign(toSign);
+                //sign = cc.sign(toSign);
             }catch(Exception e){
                 System.err.print("Error Creating User");
                 return false;
@@ -134,7 +148,7 @@ class ClientActions{
                             "\"uuid\":\""+uuid+"\","+
                             "\"pubk\":\""+pubk+"\","+
                             "\"cert\":\""+cert+"\","+
-                            "\"signature\":\""+sign+"\"");
+                            "\"signature\":\""+sign+"\"", false);
             return true;
         }
 
@@ -151,9 +165,9 @@ class ClientActions{
             }
             System.err.print("xD: "+id);
             if (id.length()==0)
-                sendCommand("\"type\":\""+type+"\"");
+                sendCommand("\"type\":\""+type+"\"", false);
             else
-                sendCommand("\"type\":\""+type+"\",\"id\":\""+id+"\"");
+                sendCommand("\"type\":\""+type+"\",\"id\":\""+id+"\"", false);
             return true;
         }
 
@@ -168,7 +182,7 @@ class ClientActions{
                 System.err.print("Error reading Line");
                 return false;
             }
-            sendCommand("\"type\":\""+type+"\",\"id\":\""+id+"\"");
+            sendCommand("\"type\":\""+type+"\",\"id\":\""+id+"\"", false);
             return true;
         }
         // 4- List all messages received by a user
@@ -182,7 +196,7 @@ class ClientActions{
                 System.err.print("Error reading Line");
                 return false;
             }
-            sendCommand("\"type\":\""+type+"\",\"id\":\""+id+"\"");
+            sendCommand("\"type\":\""+type+"\",\"id\":\""+id+"\"", false);
             return true;
         }
         // 5 - Send message to a user
@@ -265,7 +279,7 @@ class ClientActions{
                 System.err.print("Error reading Line");
                 return false;
             }
-            sendCommand("\"type\":\""+type+"\",\"id\":\""+id+"\",\"msg\":\""+msg+"\"");
+            sendCommand("\"type\":\""+type+"\",\"id\":\""+id+"\",\"msg\":\""+msg+"\"", false);
             return true;
         }
         // 7-  Send receipt for a message
@@ -290,7 +304,7 @@ class ClientActions{
             }
             System.out.print("calculating receipt... ");
             receipt="teste";
-            sendCommand("\"type\":\""+type+"\",\"id\":\""+id+"\",\"msg\":\""+msg+"\",\"receipt\":\""+receipt+"\"");
+            sendCommand("\"type\":\""+type+"\",\"id\":\""+id+"\",\"msg\":\""+msg+"\",\"receipt\":\""+receipt+"\"", false);
             return false;
         }
         // 8-  List messages sent and their receipts
@@ -313,11 +327,11 @@ class ClientActions{
                 return false;
             }
 
-            sendCommand("\"type\":\""+type+"\",\"id\":\""+id+"\",\"msg\":\""+msg+"\"");
+            sendCommand("\"type\":\""+type+"\",\"id\":\""+id+"\",\"msg\":\""+msg+"\"", false);
             return true;
         }
 
-        sendCommand( "\"Unknown request\"" );
+        sendCommand( "\"Unknown request\"", true);
         return false;
     }
 
