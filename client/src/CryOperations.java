@@ -186,14 +186,14 @@ class CryOperations{
     byte[]
     decrRSA(String privKey,byte[] todec){
         try{
-            X509EncodedKeySpec keySpec = new X509EncodedKeySpec(privKey.getBytes());
+            X509EncodedKeySpec keySpec = new X509EncodedKeySpec(Base64.getDecoder().decode(privKey.getBytes()));
             KeyFactory keyFactory = KeyFactory.getInstance("RSA");
             PrivateKey privateKey = keyFactory.generatePrivate(keySpec);
 
             Cipher cipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding");
 
             cipher.init(Cipher.DECRYPT_MODE, privateKey);
-            byte[] plainText = cipher.doFinal(todec);
+            byte[] plainText = cipher.doFinal(Base64.getDecoder().decode(todec));
             return plainText;
         }catch (Exception e){
             System.err.println("Error decr RSA" + e);

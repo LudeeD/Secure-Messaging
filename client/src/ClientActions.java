@@ -257,6 +257,7 @@ class ClientActions{
             String type = "recv";
             String id = "";
             String msg = "";
+            String[] receivedResult;
             System.out.print("id: ");
             try{
                 id = br.readLine();
@@ -272,6 +273,19 @@ class ClientActions{
                 return false;
             }
             sendCommand("\"type\":\""+type+"\",\"id\":\""+id+"\",\"msg\":\""+msg+"\"", false);
+            try{
+              JsonObject data = new JsonParser().parse( in ).getAsJsonObject();
+              JsonObject  jobject = cry.processPayloadRecv(data.getAsJsonObject(),session.getSharedSecret());
+              JsonArray jarray = jobject.getAsJsonArray("result");
+              receivedResult = jarray.get(1).getAsString().split("[\\r\\n]+");
+              System.out.println(receivedResult[0].getBytes());
+              byte[] aesKey = cry.decrRSA(cry.getKeyString(false),receivedResult[0].getBytes());
+              String decrMsg = cry.decrAES(receivedResult[1].getBytes(),aesKey);
+            }catch(Exception e){
+                System.err.print("Error receiving Message" + e);
+                return false;
+            }
+
             return true;
         }
         // 7-  Send receipt for a message
