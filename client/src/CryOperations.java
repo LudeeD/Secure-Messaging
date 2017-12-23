@@ -4,16 +4,16 @@ import javax.crypto.spec.*;
 import java.security.*;
 import java.security.spec.*;
 import java.nio.file.*;
-<<<<<<< HEAD
+
 import javax.crypto.*;
 import javax.crypto.spec.*;
 import java.util.Base64;
 import javax.xml.bind.DatatypeConverter;
-=======
+
 import com.google.gson.*;
 import java.io.*;
 
->>>>>>> 020da1f9da51b8952b9686aa2ec38578065d20eb
+
 
 class CryOperations{
 
