@@ -235,7 +235,7 @@ class ClientActions{
                   keyAES = cry.generateKeyAES();
                   msgEnc = cry.encrAES(msg, keyAES);
                   System.out.print(msgEnc);
-                  sendCommand("\"type\":\""+subType+"\",\"id\":\""+dst+"\"");
+                  sendCommand("\"type\":\""+subType+"\",\"id\":\""+dst+"\"",false);
                   try{
                     JsonObject data = new JsonParser().parse( in ).getAsJsonObject();
                     //  pubk = data.get( "pubk" ).getAsString();
@@ -254,7 +254,7 @@ class ClientActions{
                 return false;
             }
 
-            sendCommand("\"type\":\""+type+"\",\"src\":\""+srcid+"\",\"dst\":\""+dst+"\",\"msg\":\""+aesKeyEnc +"\n"+msgEnc+"\n"+"\",\"copy\":\""+aesKeyEnc +"\n"+msgEnc+"\n"+"\"");
+            sendCommand("\"type\":\""+type+"\",\"src\":\""+srcid+"\",\"dst\":\""+dst+"\",\"msg\":\""+aesKeyEnc +"\n"+msgEnc+"\n"+"\",\"copy\":\""+aesKeyEnc +"\n"+msgEnc+"\n"+"\"",false);
             return true;
         }
         // 6- Receive a message from a user message box
