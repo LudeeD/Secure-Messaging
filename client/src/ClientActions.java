@@ -215,7 +215,35 @@ class ClientActions{
                 return false;
             }
             copy=msg;
-            sendCommand("\"type\":\""+type+"\",\"src\":\""+srcid+"\",\"dst\":\""+dst+"\",\"msg\":\""+msg+"\",\"copy\":\""+copy+"\"");
+            byte[] keyAES;
+            byte[] msgEnc;
+            byte[] aesKeyEnc;
+            String subType= "list";
+            String pubk;
+            try{
+                  keyAES = cry.generateKeyAES();
+                  msgEnc = cry.encrAES(msg, keyAES);
+                  System.out.print(msgEnc);
+                  sendCommand("\"type\":\""+subType+"\",\"id\":\""+dst+"\"");
+                  try{
+                    JsonObject data = new JsonParser().parse( in ).getAsJsonObject();
+                    //  pubk = data.get( "pubk" ).getAsString();
+                    JsonObject  jobject = data.getAsJsonObject();
+                    JsonArray jarray = jobject.getAsJsonArray("data");
+                    jobject = jarray.get(0).getAsJsonObject();
+                    pubk = jobject.get("pubk").getAsString();
+                    aesKeyEnc = cry.encrRSA(pubk,keyAES);
+                    System.out.print(aesKeyEnc);
+                  }catch(Exception e){
+                      System.err.print("Error Establishing Session" + e);
+                      return false;
+                  }
+
+            }catch(Throwable e){
+                return false;
+            }
+
+            sendCommand("\"type\":\""+type+"\",\"src\":\""+srcid+"\",\"dst\":\""+dst+"\",\"msg\":\""+msgEnc+"\",\"copy\":\""+msgEnc+"\"");
             return true;
         }
         // 6- Receive a message from a user message box
