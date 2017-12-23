@@ -11,31 +11,27 @@ class CCOperations{
     String f = "./src/CitizenCard.cfg";
     Provider p;
     KeyStore ks;
+    boolean provider = false;
 
     CCOperations () {
-        System.out.println("CC Operations!");
+        provider = addProvider();
+    }
+
+    boolean
+    addProvider(){
         try{
             p = new sun.security.pkcs11.SunPKCS11(f);
             Security.addProvider( p );
             System.out.println("Addedd provider");
             ks = KeyStore.getInstance( "PKCS11", "SunPKCS11-PTeID");
             ks.load(null, null);
+            provider = true;
+            return provider;
         }catch(Exception e){
-            System.err.println("Error in CC Operations "+e);
+            System.err.println("Error in CC Add Provider"+e);
+            provider = false;
+            return provider;
         }
-    }
-
-    // Test Zones
-    void
-    printAlias() throws Exception {
-        Enumeration<String> aliases = ks.aliases();
-        while(aliases.hasMoreElements()){
-            System.out.println("===================================");
-            System.out.println(aliases.nextElement());
-        }
-
-        System.out.println("size-> "+ks.size());
-        boolean xD = checkCertChain();
     }
 
     boolean
@@ -115,23 +111,32 @@ class CCOperations{
 
 
     String
-    getUUID() throws Exception{
-        System.out.println("getUUID!");
-        X509Certificate cac = (X509Certificate) ks.getCertificate("CITIZEN AUTHENTICATION CERTIFICATE");
-        MessageDigest digest = MessageDigest.getInstance("SHA-256");
-        byte[] hash = digest.digest(cac.getEncoded());
-        return Base64.getEncoder().encodeToString(hash);
+    getUUID(){
+        try{
+            X509Certificate cac = (X509Certificate) ks.getCertificate("CITIZEN AUTHENTICATION CERTIFICATE");
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(cac.getEncoded());
+            return Base64.getEncoder().encodeToString(hash);
+        }catch (Exception e){
+            System.err.println("Error Getting Client UUID : " + e);
+            return null;
+        }
     }
 
     String
-    getCertString() throws Exception{
-        String BEGIN_CERT = "-----BEGIN CERTIFICATE-----";
-        String END_CERT = "-----END CERTIFICATE-----";
-        String LINE_SEPARATOR = System.getProperty("line.separator");
-        Base64.Encoder encoder = Base64.getEncoder();
-        X509Certificate cac = (X509Certificate) ks.getCertificate("CITIZEN AUTHENTICATION CERTIFICATE");
-        byte[] buffer = cac.getEncoded();
-        return BEGIN_CERT+LINE_SEPARATOR+new String(encoder.encode(buffer))+LINE_SEPARATOR+END_CERT;
+    getCertString(){
+        try{
+            String BEGIN_CERT = "-----BEGIN CERTIFICATE-----";
+            String END_CERT = "-----END CERTIFICATE-----";
+            String LINE_SEPARATOR = System.getProperty("line.separator");
+            Base64.Encoder encoder = Base64.getEncoder();
+            X509Certificate cac = (X509Certificate) ks.getCertificate("CITIZEN AUTHENTICATION CERTIFICATE");
+            byte[] buffer = cac.getEncoded();
+            return BEGIN_CERT+LINE_SEPARATOR+new String(encoder.encode(buffer))+LINE_SEPARATOR+END_CERT;
+        }catch (Exception e){
+            System.err.println("Error Getting Client Cert String : " + e);
+            return null;
+        }
     }
 
     void
@@ -146,7 +151,6 @@ class CCOperations{
         String cert = BEGIN_CERT+LINE_SEPARATOR+new String(encoder.encode(buffer))+LINE_SEPARATOR+END_CERT;
         Files.write(Paths.get("./teste2.pem"), cert.getBytes());
         return;
-
     }
 
     void
@@ -161,16 +165,18 @@ class CCOperations{
 
 
     String
-    sign(String toSign) throws Exception {
-        System.out.println("Signing...");
-        Signature sign = Signature.getInstance("SHA256withRSA", "SunPKCS11-PTeID");
-        PrivateKey privKey = (PrivateKey) ks.getKey("CITIZEN AUTHENTICATION CERTIFICATE", null);
-        sign.initSign(privKey);
-        sign.update(toSign.getBytes());
-        byte[] signature = sign.sign();
-        //System.out.println("Signature: " + signature);
-        return Base64.getEncoder().encodeToString(signature);
-
+    sign(String toSign){
+        try{
+            Signature sign = Signature.getInstance("SHA256withRSA", "SunPKCS11-PTeID");
+            PrivateKey privKey = (PrivateKey) ks.getKey("CITIZEN AUTHENTICATION CERTIFICATE", null);
+            sign.initSign(privKey);
+            sign.update(toSign.getBytes());
+            byte[] signature = sign.sign();
+            return Base64.getEncoder().encodeToString(signature);
+        }catch (Exception e){
+            System.err.println("Error Signing with CC : " + e);
+            return null;
+        }
         // Verify
         //Signature verif = Signature.getInstance("SHA256withRSA"); // If I load the pkcs11 provider this will fail
         //Certificate cert = ks.getCertificate("CITIZEN AUTHENTICATION CERTIFICATE");

@@ -34,7 +34,7 @@ class ServerActions implements Runnable {
 
     JsonObject
     readCommand () {
-        System.out.println("Reading Command..");
+        System.out.println("Reading Command...");
         try {
             JsonElement data = new JsonParser().parse( in );
             if (session == null && data.isJsonObject()){
@@ -64,19 +64,18 @@ class ServerActions implements Runnable {
             msg += "\"error\":" + error;
         }
         msg += "}\n";
-
+        System.out.println( "Send result: " + msg );
         try{
             if( !sessionInit ){
                 String[] results = cry.processPayloadSend(msg, session.getSharedSecret());
 
-                msg  = "{"+         "\"type\":\"payload\","+
-                                    "\"payload\":\""+results[0]+"\","+
-                                    "\"iv\":\""+results[1]+"\"," +
-                                    "\"mac\":\""+results[2]+"\""+
-                            "}";
+                msg  = "{\"type\":\"payload\","+
+                        "\"payload\":\""+results[0]+"\","+
+                        "\"iv\":\""+results[1]+"\"," +
+                        "\"mac\":\""+results[2]+"\""+
+                        "}";
             }
-
-            System.out.println( "Send result: " + msg );
+            //System.out.println( "Send result: " + msg );
             out.write ( msg.getBytes( StandardCharsets.UTF_8 ) );
             System.out.println("Sent!!!");
         }catch (Exception e){

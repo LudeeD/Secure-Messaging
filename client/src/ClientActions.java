@@ -55,14 +55,11 @@ class ClientActions{
 
     void
     sendCommand ( String cmd, boolean sessionInit ) {
-
         String msg = "{";
-        if (cmd != null) {
-            msg += cmd;
-        }
-
+        if (cmd != null) msg += cmd;
         msg += "}\n";
 
+        System.out.println(msg);
         try{
             if( !sessionInit ){
                 String[] result = cry.processPayloadSend(msg, session.getSharedSecret());
@@ -95,14 +92,14 @@ class ClientActions{
             String type = "session";
             String ln = System.getProperty("line.separator");
             String pubk;
-            String cert = "";
-            String sign = "";
+            String cert;
+            String sign;
             try{
                 session = new DHSession();
                 pubk = session.getStringPubKey();
-                //cert = cc.getCertString();
-                //String toSign = pubk+ln+cert;
-                //sign = cc.sign(toSign);
+                cert = cc.getCertString();
+                String toSign = pubk+ln+cert;
+                sign = cc.sign(toSign);
             }catch(Exception e){
                 System.err.print("Error Establishing Session " + e);
                 return false;
@@ -138,7 +135,7 @@ class ClientActions{
                 pubk = cry.getKeyString(true, "./luis.pub");
                 cert = cc.getCertString();
                 String toSign = uuid+ln+pubk+ln+cert;
-                //sign = cc.sign(toSign);
+                sign = cc.sign(toSign);
             }catch(Exception e){
                 System.err.print("Error Creating User");
                 return false;
@@ -311,49 +308,115 @@ class ClientActions{
     // Print Menu Options
     void
     printMenu(){
-        System.out.printf(  "\nOptions:\n"+
-                        "==============================================\n"+
-                        "1- Create a user message box\n"+
-                        "2- List users’ messages boxes\n"+
-                        "3- List new messages received by a user\n"+
-                        "4- List all messages received by a user\n"+
-                        "5- Send message to a user\n"+
-                        "6- Receive a message from a user message box\n"+
-                        "7- Send receipt for a message\n"+
-                        "8- List messages sent and their receipts\n"+
-                        "9- Connect to Server\n"+
-                        "0- Close Conection\n"+
+        System.out.printf(  "\nMenu Options:\n"+
+                        "#==============================================#\n"+
+                        "| 1- Create a user message box                 |\n"+
+                        "| 2- List users’ messages boxes                |\n"+
+                        "| 3- List new messages received by a user      |\n"+
+                        "| 4- List all messages received by a user      |\n"+
+                        "| 5- Send message to a user                    |\n"+
+                        "| 6- Receive a message from a user message box |\n"+
+                        "| 7- Send receipt for a message                |\n"+
+                        "| 8- List messages sent and their receipts     |\n"+
+                        "| 9- Connect to Server                         |\n"+
+                        "| 0- Close Conection                           |\n"+
+                        "#==============================================|\n"+
                         "opt -> "
                 );
         return;
     }
 
 
-    // Get Client Option
-    int
-    getOpt(){
+    void
+    printNoCCWarning(){
+        System.out.printf(  "\nWarning!\n"+
+                        "#==============================================#\n"+
+                        "| No Portuguese Citizen Card Detected, this    |\n"+
+                        "| program will not work without the citizen    |\n"+
+                        "| card.                                        |\n"+
+                        "| Please connect a CC and try again            |\n"+
+                        "|  0 - Exit Program and try again              |\n"+
+                        "#==============================================|\n"+
+                        "opt -> "
+                );
+    }
+
+    void
+    printKeyWarnings(){
+        System.out.printf(  "\nNote\n"+
+                        "#==============================================#\n"+
+                        "| Regarding other cryptographic actions, RSA   |\n"+
+                        "| keys are needeed, would you like to create   |\n"+
+                        "| new one ore load from existing files         |\n"+
+                        "|  2 - Load keys                               |\n"+
+                        "|  1 - Create New                              |\n"+
+                        "|  0 - Exit Program                            |\n"+
+                        "#==============================================|\n"+
+                        "opt -> "
+                );
+    }
+
+    String
+    getFileName(){
         try{
-            printMenu();
-            return Integer.parseInt(br.readLine());
-        }catch(Exception e){
+            System.out.printf("File path (e.g ./teste will create a ./teste.key and ./teste.pub keys)\npath :");
+            return br.readLine();
+        }catch (Exception e){
+            System.err.println("Error Reading path String");
+            return null;
         }
-        return 0;
+    }
+
+    int
+    getOpt(int min, int max){
+        int opt;
+        try{
+            opt = Integer.parseInt(br.readLine());
+            while( opt < min || opt > max ){
+                System.out.println("Invalid Option");
+                System.out.print("opt -> ");
+                opt = Integer.parseInt(br.readLine());
+            }
+            return opt;
+        }catch(Exception e){
+            return 0;
+        }
+    }
+
+    void
+    serverClose(){
+        try {
+            server.close();
+        }catch (Exception e){
+            System.err.println("Error Closing Connection to server");
+        }
+        System.exit(0);
     }
 
     // Main Client Loop
     public void
     run () {
+        int opt;
+        while ( !cc.provider ){
+            printNoCCWarning();
+            opt = getOpt(0, 0);
+            if (opt == 0) serverClose();
+        }
+        printKeyWarnings();
+        opt = getOpt(0,3);
+        if (opt == 0) serverClose();
+        if (opt == 1){
+            String path = getFileName();
+            cry.generateKey(path);
+        }
+        // if (opt == 2){
+        // }
         while (true) {
-            int opt = getOpt();
-            if ( opt == 0){
-                try {
-                    server.close();
-                }catch (Exception e){}
-                return;
-            }
+            printMenu();
+            opt = getOpt(0,9);
+            if ( opt == 0) serverClose();
             if (executeOpt(opt)) readResponse();
         }
-
     }
 
 }
