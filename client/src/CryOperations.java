@@ -83,7 +83,8 @@ class CryOperations{
     generateKeyAES(){
         try{
             KeyGenerator keyGen = KeyGenerator.getInstance("AES");
-            keyGen.init(256);
+            //keyGen.init(256);
+            keyGen.init(128);
             Key key = keyGen.generateKey();
             System.out.println(key.getEncoded());
             return key.getEncoded();
@@ -100,23 +101,32 @@ class CryOperations{
             Cipher c;
 
             // Generating IV.
+            System.out.print("Generating IV...");
             int ivSize = 16;
             byte[] iv = new byte[ivSize];
             SecureRandom random = new SecureRandom();
             random.nextBytes(iv);
             IvParameterSpec ivParameterSpec = new IvParameterSpec(iv);
+            System.out.print("OK\n");
+
             //convert key
+            System.out.print("Setting Key...");
             Key originalKey = new SecretKeySpec(key, 0, key.length, "AES");
+            System.out.print("OK\n");
 
             // ciphering
+            System.out.print("Ciphering...");
             c  = Cipher.getInstance("AES/CBC/PKCS5Padding");
             c.init(Cipher.ENCRYPT_MODE,originalKey,ivParameterSpec);
             byte[] msgenc = c.doFinal(msg.getBytes());
+            System.out.print("OK\n");
 
             // Combine IV and encrypted part.
+            System.out.print("Combine IV and ecrypted part...");
             byte[] finalMsgEnc = new byte[ivSize + msgenc.length];
             System.arraycopy(iv, 0, finalMsgEnc, 0, ivSize);
             System.arraycopy(msgenc, 0, finalMsgEnc, ivSize, msgenc.length);
+            System.out.print("OK\n");
 
             return Base64.getEncoder().encode(finalMsgEnc);
         }catch (Exception e){
@@ -241,7 +251,7 @@ class CryOperations{
             byte[] keyForMac = Arrays.copyOfRange(sessionKey, 0, sessionKey.length/2);
             Mac sha256HMAC = Mac.getInstance("HmacSHA256");
             SecretKeySpec keyMAC = new SecretKeySpec(keyForMac, "HmacSHA256");
-            System.out.println("Mac Key:"+Base64.getEncoder().encodeToString(keyMAC.getEncoded()));
+            System.out.print("Mac...");
             sha256HMAC.init(keyMAC);
             byte[] mac = sha256HMAC.doFinal(Base64.getDecoder().decode(elem.getAsString()));
 

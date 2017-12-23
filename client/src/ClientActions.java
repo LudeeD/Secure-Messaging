@@ -235,25 +235,17 @@ class ClientActions{
             String subType= "list";
             String pubk;
             try{
-                  keyAES = cry.generateKeyAES();
-                  msgEnc = cry.encrAES(msg, keyAES);
-                  System.out.print(msgEnc);
-                  sendCommand("\"type\":\""+subType+"\",\"id\":\""+dst+"\"",false);
-                  try{
-                    JsonObject data = new JsonParser().parse( in ).getAsJsonObject();
-                    //  pubk = data.get( "pubk" ).getAsString();
-                    JsonObject  jobject = data.getAsJsonObject();
-                    JsonArray jarray = jobject.getAsJsonArray("data");
-                    jobject = jarray.get(0).getAsJsonObject();
-                    pubk = jobject.get("pubk").getAsString();
-                    aesKeyEnc = cry.encrRSA(pubk,keyAES);
-                    System.out.print(aesKeyEnc);
-                  }catch(Exception e){
-                      System.err.print("Error Establishing Session" + e);
-                      return false;
-                  }
-
-            }catch(Throwable e){
+                keyAES = cry.generateKeyAES();
+                msgEnc = cry.encrAES(msg, keyAES);
+                sendCommand("\"type\":\""+subType+"\",\"id\":\""+dst+"\"",false);
+                JsonObject data = new JsonParser().parse( in ).getAsJsonObject();
+                JsonObject  jobject = cry.processPayloadRecv(data.getAsJsonObject(),session.getSharedSecret());
+                JsonArray jarray = jobject.getAsJsonArray("data");
+                jobject = jarray.get(0).getAsJsonObject();
+                pubk = jobject.get("pubk").getAsString();
+                aesKeyEnc = cry.encrRSA(pubk,keyAES);
+            }catch(Exception e){
+                System.err.print("Error Sending Message" + e);
                 return false;
             }
 
@@ -453,6 +445,10 @@ class ClientActions{
             System.out.println("Private Key path(e.g ./teste.key)");
             path = getFileName();
             cry.readKey(false, path);
+        }
+        if (opt == 3){
+            cry.readKey(true, "./teste.pub");
+            cry.readKey(false, "./teste.key");
         }
         while (true) {
             printMenu();
