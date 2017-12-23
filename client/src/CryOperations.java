@@ -1,21 +1,19 @@
 import java.util.*;
+import java.io.*;
 import javax.crypto.*;
 import javax.crypto.spec.*;
 import java.security.*;
 import java.security.spec.*;
 import java.nio.file.*;
-
-import javax.crypto.*;
-import javax.crypto.spec.*;
 import java.util.Base64;
-import javax.xml.bind.DatatypeConverter;
-
 import com.google.gson.*;
-import java.io.*;
 
 
 
 class CryOperations{
+
+    PublicKey pk;
+    private PrivateKey pr;
 
     CryOperations () {
         System.out.println("Cryptography Operations!");
@@ -27,10 +25,10 @@ class CryOperations{
             KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA");
             kpg.initialize(2048);
             KeyPair keyPair = kpg.generateKeyPair();
-            PublicKey pk = keyPair.getPublic();
-            PrivateKey pr = keyPair.getPrivate();
+            pk = keyPair.getPublic();
+            pr = keyPair.getPrivate();
             if (path == null){
-                System.out.println("Creating Default with Name");
+                System.out.println("Creating Default with Name teste");
                 path = "./teste";
             }
             writeKey(pk, path + ".pub");
@@ -49,7 +47,7 @@ class CryOperations{
         }
     }
 
-    Key
+    void
     readKey(boolean pub, String path){
         try{
             Path p = Paths.get(path);
@@ -57,22 +55,24 @@ class CryOperations{
             KeyFactory kf = KeyFactory.getInstance("RSA");
             if (pub){
                 X509EncodedKeySpec ks = new X509EncodedKeySpec(bytes);
-                return kf.generatePublic(ks);
+                pk = kf.generatePublic(ks);
+                return ;
             }else{
                 PKCS8EncodedKeySpec ks = new PKCS8EncodedKeySpec(bytes);
-                return kf.generatePrivate(ks);
+                pr = kf.generatePrivate(ks);
+                return ;
             }
         }catch (Exception e){
             System.err.print("Error Reading Key: "+e);
-            return null;
+            return ;
         }
     }
 
     String
-    getKeyString(boolean pub, String path){
+    getKeyString(boolean pub){
         try {
-            Key k = readKey(pub, path);
-            return Base64.getEncoder().encodeToString(k.getEncoded());
+            if(pub) return Base64.getEncoder().encodeToString(pk.getEncoded());
+            else return Base64.getEncoder().encodeToString(pr.getEncoded());
         }catch (Exception e){
             System.err.println("Error getting Base64 encoded Key " + e);
             return null;
@@ -80,95 +80,116 @@ class CryOperations{
     }
 
     byte[]
-    generateKeyAES() throws InvalidKeySpecException, NoSuchAlgorithmException, InvalidKeySpecException{
-        KeyGenerator keyGen = KeyGenerator.getInstance("AES");
-        keyGen.init(256);
-        Key key = keyGen.generateKey();
-        System.out.println(key.getEncoded());
+    generateKeyAES(){
+        try{
+            KeyGenerator keyGen = KeyGenerator.getInstance("AES");
+            keyGen.init(256);
+            Key key = keyGen.generateKey();
+            System.out.println(key.getEncoded());
+            return key.getEncoded();
+        }catch (Exception e){
+            System.err.println("Error generating AES Key " + e);
+            return null;
+        }
+    }
 
-        return key.getEncoded();
-      }
+    byte[]
+    encrAES(String msg,byte[] key){
+        try{
+            SecretKeyFactory skf;
+            Cipher c;
 
-      byte[]
-      encrAES(String msg,byte[] key) throws Throwable {
-        SecretKeyFactory skf;
-        Cipher c;
+            // Generating IV.
+            int ivSize = 16;
+            byte[] iv = new byte[ivSize];
+            SecureRandom random = new SecureRandom();
+            random.nextBytes(iv);
+            IvParameterSpec ivParameterSpec = new IvParameterSpec(iv);
+            //convert key
+            Key originalKey = new SecretKeySpec(key, 0, key.length, "AES");
 
-        // Generating IV.
-       int ivSize = 16;
-       byte[] iv = new byte[ivSize];
-       SecureRandom random = new SecureRandom();
-       random.nextBytes(iv);
-       IvParameterSpec ivParameterSpec = new IvParameterSpec(iv);
-       //convert key
-       Key originalKey = new SecretKeySpec(key, 0, key.length, "AES");
+            // ciphering
+            c  = Cipher.getInstance("AES/CBC/PKCS5Padding");
+            c.init(Cipher.ENCRYPT_MODE,originalKey,ivParameterSpec);
+            byte[] msgenc = c.doFinal(msg.getBytes());
 
-       // ciphering
-        c  = Cipher.getInstance("AES/CBC/PKCS5Padding");
-        c.init(Cipher.ENCRYPT_MODE,originalKey,ivParameterSpec);
-        byte[] msgenc = c.doFinal(msg.getBytes());
+            // Combine IV and encrypted part.
+            byte[] finalMsgEnc = new byte[ivSize + msgenc.length];
+            System.arraycopy(iv, 0, finalMsgEnc, 0, ivSize);
+            System.arraycopy(msgenc, 0, finalMsgEnc, ivSize, msgenc.length);
 
-          // Combine IV and encrypted part.
-         byte[] finalMsgEnc = new byte[ivSize + msgenc.length];
-         System.arraycopy(iv, 0, finalMsgEnc, 0, ivSize);
-         System.arraycopy(msgenc, 0, finalMsgEnc, ivSize, msgenc.length);
+            return Base64.getEncoder().encode(finalMsgEnc);
+        }catch (Exception e){
+            System.err.println("Error enc AES" + e);
+            return null;
+        }
+    }
 
-        return Base64.getEncoder().encode(finalMsgEnc);
+    String
+    decrAES(byte[] msgEncEnconded,byte[] key){
+        try{
+            int ivSize = 16;
+            byte[] msgEnc = Base64.getDecoder().decode(msgEncEnconded);
 
-      }
+            Key originalKey = new SecretKeySpec(key, 0, key.length, "AES");
 
-      String
-      decrAES(byte[] msgEncEnconded,byte[] key) throws Throwable {
-        int ivSize = 16;
-        byte[] msgEnc = Base64.getDecoder().decode(msgEncEnconded);
-
-        Key originalKey = new SecretKeySpec(key, 0, key.length, "AES");
-
-        // Extract IV.
-        byte[] iv = new byte[ivSize];
-        System.arraycopy(msgEnc, 0, iv, 0, iv.length);
-        IvParameterSpec ivParameterSpec = new IvParameterSpec(iv);
-
-
-        int encryptedSize = msgEnc.length - ivSize;
-        byte[] encryptedBytes = new byte[encryptedSize];
-        System.arraycopy(msgEnc, ivSize, encryptedBytes, 0, encryptedSize);
+            // Extract IV.
+            byte[] iv = new byte[ivSize];
+            System.arraycopy(msgEnc, 0, iv, 0, iv.length);
+            IvParameterSpec ivParameterSpec = new IvParameterSpec(iv);
 
 
-        Cipher cipherDecrypt = Cipher.getInstance("AES/CBC/PKCS5Padding");
-        cipherDecrypt.init(Cipher.DECRYPT_MODE, originalKey, ivParameterSpec);
-        byte[] decrypted = cipherDecrypt.doFinal(encryptedBytes);
+            int encryptedSize = msgEnc.length - ivSize;
+            byte[] encryptedBytes = new byte[encryptedSize];
+            System.arraycopy(msgEnc, ivSize, encryptedBytes, 0, encryptedSize);
 
-        return new String(decrypted);
 
-      }
-      byte[]
-      encrRSA(String pubK,byte[] toenc) throws NoSuchAlgorithmException, IllegalBlockSizeException, InvalidKeySpecException, NoSuchPaddingException,InvalidKeyException,BadPaddingException{
+            Cipher cipherDecrypt = Cipher.getInstance("AES/CBC/PKCS5Padding");
+            cipherDecrypt.init(Cipher.DECRYPT_MODE, originalKey, ivParameterSpec);
+            byte[] decrypted = cipherDecrypt.doFinal(encryptedBytes);
 
-        X509EncodedKeySpec keySpec = new X509EncodedKeySpec(Base64.getDecoder().decode(pubK.getBytes()));
-        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-        PublicKey pubKey = keyFactory.generatePublic(keySpec);
+            return new String(decrypted);
+        }catch( Exception e ){
+            System.err.println("Error enc AES" + e);
+            return null;
+        }
+    }
 
-        Cipher cipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding");
+    byte[]
+    encrRSA(String pubK,byte[] toenc){
+        try{
+            X509EncodedKeySpec keySpec = new X509EncodedKeySpec(Base64.getDecoder().decode(pubK.getBytes()));
+            KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+            PublicKey pubKey = keyFactory.generatePublic(keySpec);
 
-        cipher.init(Cipher.ENCRYPT_MODE, pubKey);
-        byte[] cipherText = cipher.doFinal(toenc);
-        return Base64.getEncoder().encode(cipherText);
-      }
+            Cipher cipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding");
 
-      byte[]
-      decrRSA(String privKey,byte[] todec) throws NoSuchAlgorithmException, IllegalBlockSizeException, InvalidKeySpecException, NoSuchPaddingException,InvalidKeyException,BadPaddingException{
+            cipher.init(Cipher.ENCRYPT_MODE, pubKey);
+            byte[] cipherText = cipher.doFinal(toenc);
+            return Base64.getEncoder().encode(cipherText);
+        }catch (Exception e){
+            System.err.println("Error enc RSA" + e);
+            return null;
+        }
+    }
 
-        X509EncodedKeySpec keySpec = new X509EncodedKeySpec(privKey.getBytes());
-        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-        PrivateKey privateKey = keyFactory.generatePrivate(keySpec);
+    byte[]
+    decrRSA(String privKey,byte[] todec){
+        try{
+            X509EncodedKeySpec keySpec = new X509EncodedKeySpec(privKey.getBytes());
+            KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+            PrivateKey privateKey = keyFactory.generatePrivate(keySpec);
 
-        Cipher cipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding");
+            Cipher cipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding");
 
-        cipher.init(Cipher.DECRYPT_MODE, privateKey);
-        byte[] plainText = cipher.doFinal(todec);
-        return plainText;
-      }
+            cipher.init(Cipher.DECRYPT_MODE, privateKey);
+            byte[] plainText = cipher.doFinal(todec);
+            return plainText;
+        }catch (Exception e){
+            System.err.println("Error decr RSA" + e);
+            return null;
+        }
+     }
 
 
     String[]

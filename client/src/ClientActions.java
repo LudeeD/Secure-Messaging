@@ -1,3 +1,4 @@
+import java.util.*;
 import java.lang.Thread;
 import java.net.Socket;
 import java.io.BufferedReader;
@@ -15,6 +16,7 @@ class ClientActions{
     CCOperations cc;
     CryOperations cry;
     DHSession session = null;
+    boolean santos = false;
 
     ClientActions ( Socket c ) {
         server = c;
@@ -59,7 +61,7 @@ class ClientActions{
         if (cmd != null) msg += cmd;
         msg += "}\n";
 
-        System.out.println(msg);
+        //System.out.println(msg);
         try{
             if( !sessionInit ){
                 String[] result = cry.processPayloadSend(msg, session.getSharedSecret());
@@ -71,7 +73,7 @@ class ClientActions{
                             "}";
             }
 
-            System.out.println( "Send cmd: " + msg );
+            //System.out.println( "Send cmd: " + msg );
             out.write ( msg.getBytes( StandardCharsets.UTF_8 ) );
             System.out.println("Sent!!!!");
         }catch (Exception e){
@@ -92,14 +94,14 @@ class ClientActions{
             String type = "session";
             String ln = System.getProperty("line.separator");
             String pubk;
-            String cert;
-            String sign;
+            String cert = "O Santos não tem leitor de CC";
+            String sign = "O Santos Não tem leitor de CC";
             try{
                 session = new DHSession();
                 pubk = session.getStringPubKey();
-                cert = cc.getCertString();
+                if(!santos) cert = cc.getCertString();
                 String toSign = pubk+ln+cert;
-                sign = cc.sign(toSign);
+                if(!santos) sign = cc.sign(toSign);
             }catch(Exception e){
                 System.err.print("Error Establishing Session " + e);
                 return false;
@@ -128,14 +130,15 @@ class ClientActions{
             String type = "create";
             String uuid;
             String pubk;
-            String cert;
-            String sign = "";
+            String cert = "O Santos não tem leitor de CC";
+            String sign = "O Santos não tem leitor de CC";
             try{
-                uuid = cc.getUUID();
-                pubk = cry.getKeyString(true, "./luis.pub");
-                cert = cc.getCertString();
+                if (!santos) uuid = cc.getUUID();
+                else uuid = Integer.toString(new Random().nextInt());
+                pubk = cry.getKeyString(true);
+                if (!santos) cert = cc.getCertString();
                 String toSign = uuid+ln+pubk+ln+cert;
-                sign = cc.sign(toSign);
+                if (!santos) sign = cc.sign(toSign);
             }catch(Exception e){
                 System.err.print("Error Creating User");
                 return false;
@@ -363,6 +366,7 @@ class ClientActions{
                         "| program will not work without the citizen    |\n"+
                         "| card.                                        |\n"+
                         "| Please connect a CC and try again            |\n"+
+                        "|  1 - Sou o Santos e não tenho leitor         |\n"+
                         "|  0 - Exit Program and try again              |\n"+
                         "#==============================================|\n"+
                         "opt -> "
@@ -387,7 +391,7 @@ class ClientActions{
     String
     getFileName(){
         try{
-            System.out.printf("File path (e.g ./teste will create a ./teste.key and ./teste.pub keys)\npath :");
+            System.out.printf("File path\npath :");
             return br.readLine();
         }catch (Exception e){
             System.err.println("Error Reading path String");
@@ -427,18 +431,29 @@ class ClientActions{
         int opt;
         while ( !cc.provider ){
             printNoCCWarning();
-            opt = getOpt(0, 0);
+            opt = getOpt(0, 1);
             if (opt == 0) serverClose();
+            if (opt == 1) {
+                santos = true;
+                break;
+            }
         }
         printKeyWarnings();
         opt = getOpt(0,3);
         if (opt == 0) serverClose();
         if (opt == 1){
+            System.out.println("Keys path, e.g ./teste will generate ./teste.pub ans ./teste.key");
             String path = getFileName();
             cry.generateKey(path);
         }
-        // if (opt == 2){
-        // }
+        if (opt == 2){
+            System.out.println("Public Key path(e.g ./teste.pub)");
+            String path = getFileName();
+            cry.readKey(true, path);
+            System.out.println("Private Key path(e.g ./teste.key)");
+            path = getFileName();
+            cry.readKey(false, path);
+        }
         while (true) {
             printMenu();
             opt = getOpt(0,9);
