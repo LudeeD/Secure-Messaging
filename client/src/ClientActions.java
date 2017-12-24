@@ -217,13 +217,19 @@ class ClientActions{
                 System.err.print("Error reading Line");
                 return false;
             }
-            copy=msg;
+
             byte[] keyAES;
             String msgEnc;
             String aesKeyEnc;
+            String msgFinal;
+            String msgCopyFinal;
+            String msgFinalSign;
+            String msgCopyFinalSign;
+            String aesKeyEncSrc;
             String subType= "list";
             String pubk;
             try{
+                //for dst
                 keyAES = cry.generateKeyAES();
                 msgEnc = cry.encrAES(msg, keyAES);
                 sendCommand("\"type\":\""+subType+"\",\"id\":\""+dst+"\"",false);
@@ -233,6 +239,20 @@ class ClientActions{
                 jobject = jarray.get(0).getAsJsonObject();
                 pubk = jobject.get("pubk").getAsString();
                 aesKeyEnc = cry.encrRSA(pubk,keyAES);
+                //for source
+                keyAES = cry.generateKeyAES();
+                copy = cry.encrAES(msg, keyAES);
+                aesKeyEncSrc = cry.encrRSA(cry.getKeyString(true),keyAES);
+                //sign message
+                //for dst
+                msgFinal = aesKeyEnc.concat("\n").concat(msgEnc);
+                msgFinalSign = cry.sign(msgFinal);
+                msgFinal = msgFinal.concat("\n").concat(msgFinalSign);
+                //for source
+                msgCopyFinal = aesKeyEncSrc.concat("\n").concat(copy);
+                msgCopyFinalSign = cry.sign(msgCopyFinal);
+                msgCopyFinal = msgCopyFinal.concat("\n").concat(msgCopyFinalSign);
+
             }catch(Exception e){
                 System.err.print("Error Sending Message" + e);
                 return false;
@@ -241,15 +261,18 @@ class ClientActions{
             System.out.println( "AES KEY (base 64) " + aesKeyEnc);
             System.out.println( "MESSAGE (base 64) " + msgEnc);
 
-            sendCommand("\"type\":\""+type+"\",\"src\":\""+srcid+"\",\"dst\":\""+dst+"\",\"msg\":\""+aesKeyEnc +"\n"+msgEnc+"\n"+"\",\"copy\":\""+aesKeyEnc +"\n"+msgEnc+"\n"+"\"",false);
+            sendCommand("\"type\":\""+type+"\",\"src\":\""+srcid+"\",\"dst\":\""+dst+"\",\"msg\":\""+msgFinal+"\",\"copy\":\""+msgCopyFinal+"\"",false);
             return true;
         }
         // 6- Receive a message from a user message box
         if (opt == 6) {
             String type = "recv";
             String id = "";
+            String srcId = "";
             String msg = "";
+            String subType= "list";
             String[] receivedResult;
+            String pubk;
             System.out.print("id: ");
             try{
                 id = br.readLine();
@@ -270,7 +293,26 @@ class ClientActions{
                 JsonObject  jobject = cry.processPayloadRecv(data.getAsJsonObject(),session.getSharedSecret());
                 System.out.println(jobject);
                 JsonArray jarray = jobject.getAsJsonArray("result");
-                receivedResult = jarray.get(1).getAsString().split("[\\r\\n]+");
+                receivedResult = jarray.get(1).getAsString().split("\n");
+
+                try{
+                    srcId=msg.split("_")[0];
+                    sendCommand("\"type\":\""+subType+"\",\"id\":\""+srcId+"\"",false);
+                    data = new JsonParser().parse( in ).getAsJsonObject();
+                    jobject = cry.processPayloadRecv(data.getAsJsonObject(),session.getSharedSecret());
+                    jarray = jobject.getAsJsonArray("data");
+                    jobject = jarray.get(0).getAsJsonObject();
+                    pubk = jobject.get("pubk").getAsString();
+                    //considering message without / n
+                    if(!cry.verigySign(receivedResult[0].concat("\n").concat(receivedResult[1]), receivedResult[2],pubk)){
+                        return false;  //file changed -> signature not valid!
+                    }
+
+                }catch(Exception e){
+                    System.err.print("Error Sending Message" + e);
+                    return false;
+                }
+
                 System.out.println( "AES KEY (base 64) " + receivedResult[0]);
                 byte[] aesKey = cry.decrRSA(receivedResult[0]);
                 System.out.println( "MESSAGE (base 64) " + receivedResult[0]);

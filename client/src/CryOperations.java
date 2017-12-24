@@ -193,8 +193,33 @@ class CryOperations{
             return null;
         }
      }
+     boolean verigySign(String data,  String signature, String pubK){
+          try{
+            X509EncodedKeySpec keySpec = new X509EncodedKeySpec(Base64.getDecoder().decode(pubK.getBytes()));
+            KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+            PublicKey pubKey = keyFactory.generatePublic(keySpec);
 
-
+            Signature sign = Signature.getInstance("SHA256withRSA");
+            sign.initVerify(pubKey);
+            sign.update(data.getBytes());
+            return sign.verify(Base64.getDecoder().decode(signature));
+        }catch(Exception e){
+            System.err.println("Error Verifying Singature : "+e);
+            return false;
+        }
+     }
+     String sign(String toSign){
+       try{
+           Signature sign = Signature.getInstance("SHA256withRSA");
+           sign.initSign(pr);
+           sign.update(toSign.getBytes());
+           byte[] signature = sign.sign();
+           return Base64.getEncoder().encodeToString(signature);
+       }catch(Exception e){
+           System.err.println("Error Signing Message : "+e);
+           return null;
+       }
+     }
     String[]
     processPayloadSend(String payload, byte[] sessionKey){
         try{
