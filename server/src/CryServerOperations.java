@@ -80,7 +80,7 @@ class CryServerOperations{
         try{
             // TODO 256 bit its too long for java, additional files are required
             byte[] keyForMac = Arrays.copyOfRange(sessionKey, 0, sessionKey.length/2);
-            byte[] keyForEnc = Arrays.copyOfRange(sessionKey, (sessionKey.length/4) * 3, sessionKey.length);
+            byte[] keyForEnc = Arrays.copyOfRange(sessionKey, sessionKey.length/2, sessionKey.length);
             System.out.print("Encrypting Payload..");
             byte[] encpayload = null;
             byte[] iv = null;
@@ -134,7 +134,7 @@ class CryServerOperations{
             }
             System.out.print("OK\n");
 
-            byte[] keyForEnc = Arrays.copyOfRange(sessionKey, (sessionKey.length/4) * 3, sessionKey.length);
+            byte[] keyForEnc = Arrays.copyOfRange(sessionKey, sessionKey.length/2, sessionKey.length);
             elem = payload.get("iv");
             Cipher decryCipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
             IvParameterSpec ivParameterSpec = new IvParameterSpec(Base64.getDecoder().decode(elem.getAsString()));

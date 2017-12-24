@@ -94,7 +94,7 @@ class CryOperations{
         }
     }
 
-    byte[]
+    String
     encrAES(String msg,byte[] key){
         try{
             SecretKeyFactory skf;
@@ -128,7 +128,7 @@ class CryOperations{
             System.arraycopy(msgenc, 0, finalMsgEnc, ivSize, msgenc.length);
             System.out.print("OK\n");
 
-            return Base64.getEncoder().encode(finalMsgEnc);
+            return Base64.getEncoder().encodeToString(finalMsgEnc);
         }catch (Exception e){
             System.err.println("Error enc AES" + e);
             return null;
@@ -136,7 +136,7 @@ class CryOperations{
     }
 
     String
-    decrAES(byte[] msgEncEnconded,byte[] key){
+    decrAES(String msgEncEnconded,byte[] key){
         try{
             int ivSize = 16;
             byte[] msgEnc = Base64.getDecoder().decode(msgEncEnconded);
@@ -148,11 +148,9 @@ class CryOperations{
             System.arraycopy(msgEnc, 0, iv, 0, iv.length);
             IvParameterSpec ivParameterSpec = new IvParameterSpec(iv);
 
-
             int encryptedSize = msgEnc.length - ivSize;
             byte[] encryptedBytes = new byte[encryptedSize];
             System.arraycopy(msgEnc, ivSize, encryptedBytes, 0, encryptedSize);
-
 
             Cipher cipherDecrypt = Cipher.getInstance("AES/CBC/PKCS5Padding");
             cipherDecrypt.init(Cipher.DECRYPT_MODE, originalKey, ivParameterSpec);
@@ -165,7 +163,7 @@ class CryOperations{
         }
     }
 
-    byte[]
+    String
     encrRSA(String pubK,byte[] toenc){
         try{
             X509EncodedKeySpec keySpec = new X509EncodedKeySpec(Base64.getDecoder().decode(pubK.getBytes()));
@@ -176,7 +174,7 @@ class CryOperations{
 
             cipher.init(Cipher.ENCRYPT_MODE, pubKey);
             byte[] cipherText = cipher.doFinal(toenc);
-            return Base64.getEncoder().encode(cipherText);
+            return Base64.getEncoder().encodeToString(cipherText);
         }catch (Exception e){
             System.err.println("Error enc RSA" + e);
             return null;
@@ -184,16 +182,11 @@ class CryOperations{
     }
 
     byte[]
-    decrRSA(String privKey,byte[] todec){
+    decrRSA(String todec){
         try{
-            PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(Base64.getDecoder().decode(privKey.getBytes()));
-            KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-            PrivateKey privateKey = keyFactory.generatePrivate(keySpec);
-
             Cipher cipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding");
-            System.out.print(todec.length);
-            cipher.init(Cipher.DECRYPT_MODE, privateKey);
-            byte[] plainText = cipher.doFinal(todec);
+            cipher.init(Cipher.DECRYPT_MODE, pr);
+            byte[] plainText = cipher.doFinal(Base64.getDecoder().decode(todec));
             return plainText;
         }catch (Exception e){
             System.err.println("Error decr RSA" + e);
@@ -208,7 +201,7 @@ class CryOperations{
             System.out.print("Encrypting Payload...");
             // TODO 256 bit its too long for java, additional files are required
             byte[] keyForMac = Arrays.copyOfRange(sessionKey, 0, sessionKey.length/2);
-            byte[] keyForEnc = Arrays.copyOfRange(sessionKey, (sessionKey.length/4) * 3, sessionKey.length);
+            byte[] keyForEnc = Arrays.copyOfRange(sessionKey, sessionKey.length/2, sessionKey.length);
             byte[] encpayload = null;
             byte[] iv = null;
             SecretKeySpec sks = new SecretKeySpec(keyForEnc, "AES");
@@ -266,7 +259,7 @@ class CryOperations{
             System.out.print("OK\n");
 
             System.out.print("Decrypting...");
-            byte[] keyForEnc = Arrays.copyOfRange(sessionKey, (sessionKey.length/4) * 3, sessionKey.length);
+            byte[] keyForEnc = Arrays.copyOfRange(sessionKey, sessionKey.length/2, sessionKey.length);
             elem = payload.get("iv");
             Cipher decryCipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
             IvParameterSpec ivParameterSpec = new IvParameterSpec(Base64.getDecoder().decode(elem.getAsString()));

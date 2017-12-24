@@ -206,23 +206,12 @@ class ClientActions{
             String dst = "";
             String msg = "";
             String copy = "";
-            System.out.print("srcid: ");
             try{
+                System.out.print("srcid: ");
                 srcid = br.readLine();
-            }catch(Exception e){
-                System.err.print("Error reading Line");
-                return false;
-            }
-            System.out.print("dst: ");
-            try{
+                System.out.print("dst: ");
                 dst = br.readLine();
-            }catch(Exception e){
-                System.err.print("Error reading Line");
-                return false;
-            }
-
-            System.out.print("msg: ");
-            try{
+                System.out.print("msg: ");
                 msg = br.readLine();
             }catch(Exception e){
                 System.err.print("Error reading Line");
@@ -230,8 +219,8 @@ class ClientActions{
             }
             copy=msg;
             byte[] keyAES;
-            byte[] msgEnc;
-            byte[] aesKeyEnc;
+            String msgEnc;
+            String aesKeyEnc;
             String subType= "list";
             String pubk;
             try{
@@ -248,6 +237,9 @@ class ClientActions{
                 System.err.print("Error Sending Message" + e);
                 return false;
             }
+
+            System.out.println( "AES KEY (base 64) " + aesKeyEnc);
+            System.out.println( "MESSAGE (base 64) " + msgEnc);
 
             sendCommand("\"type\":\""+type+"\",\"src\":\""+srcid+"\",\"dst\":\""+dst+"\",\"msg\":\""+aesKeyEnc +"\n"+msgEnc+"\n"+"\",\"copy\":\""+aesKeyEnc +"\n"+msgEnc+"\n"+"\"",false);
             return true;
@@ -274,19 +266,22 @@ class ClientActions{
             }
             sendCommand("\"type\":\""+type+"\",\"id\":\""+id+"\",\"msg\":\""+msg+"\"", false);
             try{
-              JsonObject data = new JsonParser().parse( in ).getAsJsonObject();
-              JsonObject  jobject = cry.processPayloadRecv(data.getAsJsonObject(),session.getSharedSecret());
-              JsonArray jarray = jobject.getAsJsonArray("result");
-              receivedResult = jarray.get(1).getAsString().split("[\\r\\n]+");
-              System.out.println(receivedResult[0].getBytes());
-              byte[] aesKey = cry.decrRSA(cry.getKeyString(false),receivedResult[0].getBytes());
-              String decrMsg = cry.decrAES(receivedResult[1].getBytes(),aesKey);
+                JsonObject data = new JsonParser().parse( in ).getAsJsonObject();
+                JsonObject  jobject = cry.processPayloadRecv(data.getAsJsonObject(),session.getSharedSecret());
+                System.out.println(jobject);
+                JsonArray jarray = jobject.getAsJsonArray("result");
+                receivedResult = jarray.get(1).getAsString().split("[\\r\\n]+");
+                System.out.println( "AES KEY (base 64) " + receivedResult[0]);
+                byte[] aesKey = cry.decrRSA(receivedResult[0]);
+                System.out.println( "MESSAGE (base 64) " + receivedResult[0]);
+                String decrMsg = cry.decrAES(receivedResult[1], aesKey);
+                System.out.println(decrMsg);
             }catch(Exception e){
                 System.err.print("Error receiving Message" + e);
                 return false;
             }
 
-            return true;
+            return false;
         }
         // 7-  Send receipt for a message
         if (opt == 7) {
