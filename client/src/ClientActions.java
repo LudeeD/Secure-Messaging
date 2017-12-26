@@ -7,8 +7,10 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import com.google.gson.*;
 import com.google.gson.stream.*;
+import java.security.*;
 
 class ClientActions{
+
     Socket server;
     JsonReader in;
     OutputStream out;
@@ -17,13 +19,13 @@ class ClientActions{
     CryOperations cry;
     DHSession session = null;
     boolean santos = false;
+    UserDescription currUser;
 
     ClientActions ( Socket c ) {
         server = c;
         try {
-            cc = new CCOperations();
-            cry = new CryOperations();
-            //cry.generateKey();
+            cc  = new CCOperations();           // Try to initialize CC operation
+            cry = new CryOperations();          // Initialize Cry Operations
 
             in = new JsonReader(
                     new InputStreamReader ( c.getInputStream(), "UTF-8") );
@@ -75,7 +77,7 @@ class ClientActions{
 
             //System.out.println( "Send cmd: " + msg );
             out.write ( msg.getBytes( StandardCharsets.UTF_8 ) );
-            System.out.println("Sent!!!!");
+            //System.out.println("Sent!!!!");
         }catch (Exception e){
             System.err.print ( "Error while sending cmd to socket");
         }
@@ -90,67 +92,12 @@ class ClientActions{
         }
 
         if (opt == 9) {
-            System.out.println("Connect to Server");
-            String type = "session";
-            String ln = System.getProperty("line.separator");
-            String pubk;
-            String cert = "O Santos não tem leitor de CC";
-            String sign = "O Santos Não tem leitor de CC";
-            try{
-                session = new DHSession();
-                pubk = session.getStringPubKey();
-                if(!santos) cert = cc.getCertString();
-                String toSign = pubk+ln+cert;
-                if(!santos) sign = cc.sign(toSign);
-            }catch(Exception e){
-                System.err.print("Error Establishing Session " + e);
-                return false;
-            }
-
-            sendCommand(    "\"type\":\""+type+"\","+
-                            "\"pubk\":\""+pubk+"\","+
-                            "\"cert\":\""+cert+"\","+
-                            "\"signature\":\""+sign+"\"", true);
-
-            try{
-                JsonObject data = new JsonParser().parse( in ).getAsJsonObject();
-                pubk = data.get( "pubk" ).getAsString();
-                session.generateSecret(pubk);
-            }catch(Exception e){
-                System.err.print("Error Establishing Session 2" + e);
-                return false;
-            }
-            return false;
-        }
+       }
 
         // 1- Create new User
         if (opt == 1) {
-            System.out.println("Create new user...");
-            String ln = System.getProperty("line.separator");
-            String type = "create";
-            String uuid;
-            String pubk;
-            String cert = "O Santos não tem leitor de CC";
-            String sign = "O Santos não tem leitor de CC";
-            try{
-                if (!santos) uuid = cc.getUUID();
-                else uuid = Integer.toString(new Random().nextInt());
-                pubk = cry.getKeyString(true);
-                if (!santos) cert = cc.getCertString();
-                String toSign = uuid+ln+pubk+ln+cert;
-                if (!santos) sign = cc.sign(toSign);
-            }catch(Exception e){
-                System.err.print("Error Creating User");
-                return false;
-            }
-
-            sendCommand(    "\"type\":\""+type+"\","+
-                            "\"uuid\":\""+uuid+"\","+
-                            "\"pubk\":\""+pubk+"\","+
-                            "\"cert\":\""+cert+"\","+
-                            "\"signature\":\""+sign+"\"", false);
-            return true;
-        }
+            System.out.println("Moved");
+                    }
 
         // 2- List users’ messages boxes
         if (opt == 2) {
@@ -174,17 +121,11 @@ class ClientActions{
         //  3- List new messages received by a user
         if (opt == 3) {
             String type = "new";
-            String id = "";
-            System.out.print("id: ");
-            try{
-                id = br.readLine();
-            }catch(Exception e){
-                System.err.print("Error reading Line");
-                return false;
-            }
+            String id = "" + currUser.getId();
             sendCommand("\"type\":\""+type+"\",\"id\":\""+id+"\"", false);
             return true;
         }
+
         // 4- List all messages received by a user
         if (opt == 4) {
             String type = "all";
@@ -202,13 +143,11 @@ class ClientActions{
         // 5 - Send message to a user
         if (opt == 5) {
             String type = "send";
-            String srcid = "";
+            String srcid = ""+currUser.getId();
             String dst = "";
             String msg = "";
             String copy = "";
             try{
-                System.out.print("srcid: ");
-                srcid = br.readLine();
                 System.out.print("dst: ");
                 dst = br.readLine();
                 System.out.print("msg: ");
@@ -242,15 +181,16 @@ class ClientActions{
                 //for source
                 keyAES = cry.generateKeyAES();
                 copy = cry.encrAES(msg, keyAES);
-                aesKeyEncSrc = cry.encrRSA(cry.getKeyString(true),keyAES);
+                aesKeyEncSrc = cry.encrRSA(currUser.getPublicKeyString(),keyAES);
                 //sign message
                 //for dst
                 msgFinal = aesKeyEnc.concat("\n").concat(msgEnc);
-                msgFinalSign = cry.sign(msgFinal);
+                msgFinalSign = cc.sign(msgFinal);
                 msgFinal = msgFinal.concat("\n").concat(msgFinalSign);
                 //for source
                 msgCopyFinal = aesKeyEncSrc.concat("\n").concat(copy);
-                msgCopyFinalSign = cry.sign(msgCopyFinal);
+                // #Todo Sign the encrypted Data or the Clear Text?
+                msgCopyFinalSign = cc.sign(msgCopyFinal);
                 msgCopyFinal = msgCopyFinal.concat("\n").concat(msgCopyFinalSign);
 
             }catch(Exception e){
@@ -258,28 +198,18 @@ class ClientActions{
                 return false;
             }
 
-            System.out.println( "AES KEY (base 64) " + aesKeyEnc);
-            System.out.println( "MESSAGE (base 64) " + msgEnc);
-
             sendCommand("\"type\":\""+type+"\",\"src\":\""+srcid+"\",\"dst\":\""+dst+"\",\"msg\":\""+msgFinal+"\",\"copy\":\""+msgCopyFinal+"\"",false);
             return true;
         }
         // 6- Receive a message from a user message box
         if (opt == 6) {
             String type = "recv";
-            String id = "";
+            String id = ""+currUser.getId();
             String srcId = "";
             String msg = "";
             String subType= "list";
             String[] receivedResult;
             String pubk;
-            System.out.print("id: ");
-            try{
-                id = br.readLine();
-            }catch(Exception e){
-                System.err.print("Error reading Line");
-                return false;
-            }
             System.out.print("msg id: ");
             try{
                 msg = br.readLine();
@@ -289,35 +219,28 @@ class ClientActions{
             }
             sendCommand("\"type\":\""+type+"\",\"id\":\""+id+"\",\"msg\":\""+msg+"\"", false);
             try{
-                JsonObject data = new JsonParser().parse( in ).getAsJsonObject();
+                JsonObject  data = new JsonParser().parse( in ).getAsJsonObject();
                 JsonObject  jobject = cry.processPayloadRecv(data.getAsJsonObject(),session.getSharedSecret());
-                System.out.println(jobject);
-                JsonArray jarray = jobject.getAsJsonArray("result");
+                JsonArray   jarray = jobject.getAsJsonArray("result");
                 receivedResult = jarray.get(1).getAsString().split("\n");
 
-                try{
-                    srcId=msg.split("_")[0];
-                    sendCommand("\"type\":\""+subType+"\",\"id\":\""+srcId+"\"",false);
-                    data = new JsonParser().parse( in ).getAsJsonObject();
-                    jobject = cry.processPayloadRecv(data.getAsJsonObject(),session.getSharedSecret());
-                    jarray = jobject.getAsJsonArray("data");
-                    jobject = jarray.get(0).getAsJsonObject();
-                    pubk = jobject.get("pubk").getAsString();
-                    //considering message without / n
-                    if(!cry.verigySign(receivedResult[0].concat("\n").concat(receivedResult[1]), receivedResult[2],pubk)){
-                        return false;  //file changed -> signature not valid!
-                    }
+                srcId=jarray.get(0).getAsString();
+                sendCommand("\"type\":\""+subType+"\",\"id\":\""+srcId+"\"",false);
+                data = new JsonParser().parse( in ).getAsJsonObject();
+                jobject = cry.processPayloadRecv(data, session.getSharedSecret());
+                JsonObject result = jobject.getAsJsonArray("data").get(0).getAsJsonObject();
+                UserDescription senderUser = new UserDescription(result,null);
 
-                }catch(Exception e){
-                    System.err.print("Error Sending Message" + e);
-                    return false;
+                if(!cc.verifySign(receivedResult[0].concat("\n").concat(receivedResult[1]), receivedResult[2],senderUser.getCertKey())){
+                    System.out.println("Warning, Problems with the Signature");
                 }
 
-                System.out.println( "AES KEY (base 64) " + receivedResult[0]);
-                byte[] aesKey = cry.decrRSA(receivedResult[0]);
-                System.out.println( "MESSAGE (base 64) " + receivedResult[0]);
+
+                //System.out.println( "AES KEY (base 64) " + receivedResult[0]);
+                byte[] aesKey = cry.decrRSA(receivedResult[0], currUser.getPrivateKey());
+                //System.out.println( "MESSAGE (base 64) " + receivedResult[0]);
                 String decrMsg = cry.decrAES(receivedResult[1], aesKey);
-                System.out.println(decrMsg);
+                System.out.println("Text of Message: "+decrMsg);
             }catch(Exception e){
                 System.err.print("Error receiving Message" + e);
                 return false;
@@ -378,6 +301,105 @@ class ClientActions{
         return false;
     }
 
+    boolean
+    kindOfLogin(String uuid, boolean newUser, PublicKey pubK, PrivateKey privK ){
+
+        String id = "";
+        String type;
+        JsonObject payload;
+        JsonObject data;
+
+        if( newUser ){
+            // Issue A CREATE and build UserDescription currUser
+            String ln = System.getProperty("line.separator");
+            type = "create";
+            String pubk = "Something went wrong";
+            String cert = "Something went wrong";
+            String sign = "Something went wrong";
+            try{
+                uuid = uuid;
+                pubk = Base64.getEncoder().encodeToString(pubK.getEncoded());
+                cert = cc.getCertString();
+                String toSign = uuid+ln+pubk+ln+cert;
+                sign = cc.sign(toSign);
+            }catch(Exception e){
+                System.err.print("Error Creating User" + e);
+                System.exit(1);
+            }
+
+            sendCommand(    "\"type\":\""+type+"\","+
+                            "\"uuid\":\""+uuid+"\","+
+                            "\"pubk\":\""+pubk+"\","+
+                            "\"cert\":\""+cert+"\","+
+                            "\"signature\":\""+sign+"\"", false);
+
+            System.out.println("Sent new User Creatin");
+            payload = new JsonParser().parse( in ).getAsJsonObject();
+            data = cry.processPayloadRecv(payload , session.getSharedSecret());
+            System.out.println(data);
+            id = data.get( "result" ).getAsString();
+        }
+
+        System.out.println("Going to list");
+        // Issue a LIST and build UserDescription currUser
+        type = "list";
+
+        if (id.length()==0)
+            sendCommand("\"type\":\""+type+"\"", false);
+        else
+            sendCommand("\"type\":\""+type+"\",\"id\":\""+id+"\"", false);
+
+        payload = new JsonParser().parse( in ).getAsJsonObject();
+        data = cry.processPayloadRecv(payload , session.getSharedSecret());
+        JsonArray result = data.getAsJsonArray("data");
+
+        for ( JsonElement user : result ){
+            JsonObject u = user.getAsJsonObject();
+            if( u.get("uuid").getAsString().equals(uuid)){
+                currUser = new UserDescription(u, privK);
+                return true;
+            }
+        }
+
+        System.out.println("No User Exists");
+        return false;
+    }
+
+    void
+    establishSession(){
+        System.out.print("Establishing Session...");
+        String type = "session";
+        String ln = System.getProperty("line.separator");
+        String pubk = "Something is not right";
+        String cert = "Something is not right";
+        String sign = "Something is not right";
+        try{
+            session = new DHSession();
+            pubk = session.getStringPubKey();
+            cert = cc.getCertString();
+            String toSign = pubk+ln+cert;
+            sign = cc.sign(toSign);
+        }catch(Exception e){
+            System.err.print("Error Establishing Session " + e);
+            System.exit(1);
+        }
+
+        sendCommand(    "\"type\":\""+type+"\","+
+                        "\"pubk\":\""+pubk+"\","+
+                        "\"cert\":\""+cert+"\","+
+                        "\"signature\":\""+sign+"\"", true);
+
+        try{
+            // TODO verify the response of server for success
+            JsonObject data = new JsonParser().parse( in ).getAsJsonObject();
+            pubk = data.get( "pubk" ).getAsString();
+            session.generateSecret(pubk);
+        }catch(Exception e){
+            System.err.print("Error Establishing Session 2" + e);
+            System.exit(1);
+        }
+        System.out.print("OK\n");
+    }
 
     // Print Menu Options
     void
@@ -422,9 +444,38 @@ class ClientActions{
                         "#==============================================#\n"+
                         "| Regarding other cryptographic actions, RSA   |\n"+
                         "| keys are needeed, would you like to create   |\n"+
-                        "| new one ore load from existing files         |\n"+
+                        "| new one or  load from existing files         |\n"+
                         "|  2 - Load keys                               |\n"+
                         "|  1 - Create New                              |\n"+
+                        "|  0 - Exit Program                            |\n"+
+                        "#==============================================|\n"+
+                        "opt -> "
+                );
+    }
+
+    void
+    printKindOfLogin( String uuid ){
+        System.out.printf(  "\nKind of Login\n"+
+                        "#==============================================#\n"+
+                        "| Welcome,                                     |\n"+
+                        "| %44s |\n"+
+                        "|                                              |\n"+
+                        "|  2 - New User                                |\n"+
+                        "|  1 - Existing User                           |\n"+
+                        "|  0 - Exit Program                            |\n"+
+                        "#==============================================|\n"+
+                        "opt -> ", uuid
+                );
+    }
+
+    void
+    printEstablishSession(){
+        System.out.printf(  "\nEstablish Session\n"+
+                        "#==============================================#\n"+
+                        "| A encrypted session is going to be made      |\n"+
+                        "| between this client and the Server           |\n"+
+                        "|                                              |\n"+
+                        "|  1 - Continue                                |\n"+
                         "|  0 - Exit Program                            |\n"+
                         "#==============================================|\n"+
                         "opt -> "
@@ -472,34 +523,58 @@ class ClientActions{
     public void
     run () {
         int opt;
-        while ( !cc.provider ){
+
+        if ( !cc.provider ){
             printNoCCWarning();
-            opt = getOpt(0, 1);
-            if (opt == 0) serverClose();
-            if (opt == 1) {
-                santos = true;
-                break;
+            opt = getOpt(0,1);
+            serverClose();
+        }
+
+        // Establish Session
+        printEstablishSession();
+        opt = getOpt(0,1);
+        if( opt == 0 ) serverClose();
+        establishSession();
+
+        // Kind Of Login
+        boolean sucess_login = false;
+        while(!sucess_login){
+            String uuid = cc.getUUID();
+            printKindOfLogin(uuid);
+            int opt_login = getOpt(0,2);
+            if( opt_login == 0 ) serverClose();
+
+            printKeyWarnings();
+            opt = getOpt(0,4);
+            String path;
+            PublicKey pubK = null;
+            PrivateKey privK = null;
+            switch (opt){
+                case 0: serverClose();
+                        break;
+                case 1: System.out.println("Keys path (e.g ./teste");
+                        path = getFileName();
+                        KeyPair kp = cry.generateKey(path);
+                        pubK = kp.getPublic();
+                        privK = kp.getPrivate();
+                        break;
+                case 2: System.out.println("Public Key path(e.g ./teste.pub)");
+                        path = getFileName();
+                        pubK = (PublicKey)cry.readKey(true, path);
+                        System.out.println("Private Key path(e.g ./teste.key)");
+                        path = getFileName();
+                        privK = (PrivateKey)cry.readKey(false, path);
+                        break;
+                case 3: pubK  = (PublicKey)cry.readKey(true, "./user1.pub");
+                        privK = (PrivateKey)cry.readKey(false, "./user1.key");
+                        break;
+                case 4: pubK  = (PublicKey)cry.readKey(true, "./user2.pub");
+                        privK = (PrivateKey)cry.readKey(false, "./user2.key");
+                        break;
             }
-        }
-        printKeyWarnings();
-        opt = getOpt(0,3);
-        if (opt == 0) serverClose();
-        if (opt == 1){
-            System.out.println("Keys path, e.g ./teste will generate ./teste.pub ans ./teste.key");
-            String path = getFileName();
-            cry.generateKey(path);
-        }
-        if (opt == 2){
-            System.out.println("Public Key path(e.g ./teste.pub)");
-            String path = getFileName();
-            cry.readKey(true, path);
-            System.out.println("Private Key path(e.g ./teste.key)");
-            path = getFileName();
-            cry.readKey(false, path);
-        }
-        if (opt == 3){
-            cry.readKey(true, "./teste.pub");
-            cry.readKey(false, "./teste.key");
+
+            if (opt_login == 2) sucess_login=kindOfLogin(uuid, true, pubK, privK);
+            else sucess_login=kindOfLogin(uuid, false, pubK, privK);
         }
         while (true) {
             printMenu();

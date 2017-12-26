@@ -12,30 +12,28 @@ import com.google.gson.*;
 
 class CryOperations{
 
-    PublicKey pk;
-    private PrivateKey pr;
-
     CryOperations () {
         System.out.println("Cryptography Operations!");
     }
 
-    void
+    KeyPair
     generateKey(String path){
         try{
             KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA");
             kpg.initialize(2048);
             KeyPair keyPair = kpg.generateKeyPair();
-            pk = keyPair.getPublic();
-            pr = keyPair.getPrivate();
             if (path == null){
                 System.out.println("Creating Default with Name teste");
                 path = "./teste";
             }
-            writeKey(pk, path + ".pub");
-            writeKey(pr, path + ".key");
+            writeKey(keyPair.getPublic(), path + ".pub");
+            writeKey(keyPair.getPrivate(), path + ".key");
+            return keyPair;
         }catch (Exception e){
             System.err.print("Error Generating Key: "+e);
+            System.exit(1);
         }
+        return null;
     }
 
     void
@@ -47,7 +45,7 @@ class CryOperations{
         }
     }
 
-    void
+    Key
     readKey(boolean pub, String path){
         try{
             Path p = Paths.get(path);
@@ -55,29 +53,28 @@ class CryOperations{
             KeyFactory kf = KeyFactory.getInstance("RSA");
             if (pub){
                 X509EncodedKeySpec ks = new X509EncodedKeySpec(bytes);
-                pk = kf.generatePublic(ks);
-                return ;
+                return kf.generatePublic(ks);
             }else{
                 PKCS8EncodedKeySpec ks = new PKCS8EncodedKeySpec(bytes);
-                pr = kf.generatePrivate(ks);
-                return ;
+                return kf.generatePrivate(ks);
             }
         }catch (Exception e){
             System.err.print("Error Reading Key: "+e);
-            return ;
-        }
-    }
-
-    String
-    getKeyString(boolean pub){
-        try {
-            if(pub) return Base64.getEncoder().encodeToString(pk.getEncoded());
-            else return Base64.getEncoder().encodeToString(pr.getEncoded());
-        }catch (Exception e){
-            System.err.println("Error getting Base64 encoded Key " + e);
             return null;
         }
     }
+
+
+    //String
+    //getKeyString(boolean pub){
+    //    try {
+    //        if(pub) return Base64.getEncoder().encodeToString(pk.getEncoded());
+    //        else return Base64.getEncoder().encodeToString(pr.getEncoded());
+    //    }catch (Exception e){
+    //        System.err.println("Error getting Base64 encoded Key " + e);
+    //        return null;
+    //    }
+    //}
 
     byte[]
     generateKeyAES(){
@@ -164,7 +161,7 @@ class CryOperations{
     }
 
     String
-    encrRSA(String pubK,byte[] toenc){
+    encrRSA(String pubK, byte[] toenc){
         try{
             X509EncodedKeySpec keySpec = new X509EncodedKeySpec(Base64.getDecoder().decode(pubK.getBytes()));
             KeyFactory keyFactory = KeyFactory.getInstance("RSA");
@@ -182,7 +179,7 @@ class CryOperations{
     }
 
     byte[]
-    decrRSA(String todec){
+    decrRSA(String todec, PrivateKey pr){
         try{
             Cipher cipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding");
             cipher.init(Cipher.DECRYPT_MODE, pr);
@@ -208,8 +205,9 @@ class CryOperations{
             return false;
         }
      }
-     String sign(String toSign){
-       try{
+
+    String sign(String toSign, PrivateKey pr){
+        try{
            Signature sign = Signature.getInstance("SHA256withRSA");
            sign.initSign(pr);
            sign.update(toSign.getBytes());
@@ -219,12 +217,12 @@ class CryOperations{
            System.err.println("Error Signing Message : "+e);
            return null;
        }
-     }
+    }
+
     String[]
     processPayloadSend(String payload, byte[] sessionKey){
         try{
             System.out.print("Encrypting Payload...");
-            // TODO 256 bit its too long for java, additional files are required
             byte[] keyForMac = Arrays.copyOfRange(sessionKey, 0, sessionKey.length/2);
             byte[] keyForEnc = Arrays.copyOfRange(sessionKey, sessionKey.length/2, sessionKey.length);
             byte[] encpayload = null;
@@ -256,7 +254,7 @@ class CryOperations{
 
 
     JsonObject
-    processPayloadRecv( JsonObject payload,  byte[] sessionKey ) throws Exception{
+    processPayloadRecv( JsonObject payload,  byte[] sessionKey ){
         try{
             JsonElement elem = payload.get("type");
             if(elem.getAsString().equals("session")){
@@ -272,9 +270,6 @@ class CryOperations{
             System.out.print("Mac...");
             sha256HMAC.init(keyMAC);
             byte[] mac = sha256HMAC.doFinal(Base64.getDecoder().decode(elem.getAsString()));
-
-            //System.out.println("Calculated " +Base64.getEncoder().encodeToString(mac) );
-            //System.out.println("Received " + payload.get("mac").getAsString());
 
             elem = payload.get("mac");
             if (!Base64.getEncoder().encodeToString(mac).equals(elem.getAsString())){

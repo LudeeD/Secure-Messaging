@@ -178,16 +178,22 @@ class CCOperations{
             return null;
         }
         // Verify
-        //Signature verif = Signature.getInstance("SHA256withRSA"); // If I load the pkcs11 provider this will fail
-        //Certificate cert = ks.getCertificate("CITIZEN AUTHENTICATION CERTIFICATE");
-        //PublicKey pubK = cert.getPublicKey();
-        //System.out.println(pubK);
-        //verif.initVerify(pubK);
-        //promptEnterKey();
-        //verif.update(teste.getBytes());
-        //boolean verification = verif.verify(signature);
-        //System.out.print("Verification: "+verification);
-    }
+        }
+
+    boolean
+    verifySign(String toVerify, String signature, PublicKey pubk){
+        try{
+            Signature verif = Signature.getInstance("SHA256withRSA"); // If I load the pkcs11 provider this will fail
+            verif.initVerify(pubk);
+            verif.update(toVerify.getBytes());
+            boolean verification = verif.verify(Base64.getDecoder().decode(signature));
+            System.out.println("Verification: "+verification);
+            return verification;
+        }catch (Exception e){
+            System.err.println("Error Verifying Signature with CC : " + e);
+            return false;
+        }
+   }
 
     public static void
     promptEnterKey(){

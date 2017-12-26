@@ -10,7 +10,7 @@ class DHSession{
     byte[] sharedSecret = null;
 
     DHSession() throws Exception{
-        System.out.println("Diffie Helman Session Key Exchange");
+        //System.out.println("Diffie Helman Session Key Exchange");
         KeyPairGenerator kpg = KeyPairGenerator.getInstance("DH");
         kpg.initialize(512);
         kp = kpg.generateKeyPair();
