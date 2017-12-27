@@ -24,7 +24,7 @@ class CryOperations{
       return this.nonces.get(msg_id);
     }
 
-    void
+    KeyPair
     generateKey(String path){
         try{
             KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA");
