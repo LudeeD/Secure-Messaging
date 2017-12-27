@@ -14,11 +14,18 @@ class CryOperations{
 
     PublicKey pk;
     private PrivateKey pr;
-
+    private HashMap<String, String> nonces = new HashMap<String, String>();
     CryOperations () {
         System.out.println("Cryptography Operations!");
     }
-
+    void
+    set_noncereceipt(String nonce, String msg_id){
+      this.nonces.put(msg_id,nonce);
+    }
+    String
+    get_noncereceipt(String msg_id){
+      return this.nonces.get(msg_id);
+    }
     void
     generateKey(String path){
         try{

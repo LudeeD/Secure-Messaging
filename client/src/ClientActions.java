@@ -307,6 +307,7 @@ class ClientActions{
                     if(!cry.verigySign(receivedResult[0].concat("\n").concat(receivedResult[1]), receivedResult[2],pubk)){
                         return false;  //file changed -> signature not valid!
                     }
+                    cry.set_noncereceipt(receivedResult[3],msg);
 
                 }catch(Exception e){
                     System.err.print("Error Sending Message" + e);
@@ -330,7 +331,7 @@ class ClientActions{
             String type = "receipt";
             String id = "";
             String msg = "";
-            String receipt = "";
+              String receipt = "";
             System.out.print("id: ");
             try{
                 id = br.readLine();
@@ -347,7 +348,7 @@ class ClientActions{
             }
             System.out.print("calculating receipt... ");
             receipt="teste";
-            sendCommand("\"type\":\""+type+"\",\"id\":\""+id+"\",\"msg\":\""+msg+"\",\"receipt\":\""+receipt+"\"", false);
+            sendCommand("\"type\":\""+type+"\",\"id\":\""+id+"\",\"msg\":\""+msg+"\",\"receipt\":\""+receipt+"\",\"nonce\":\""+cry.get_noncereceipt(msg)+"\"", false);
             return false;
         }
         // 8-  List messages sent and their receipts
