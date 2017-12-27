@@ -110,12 +110,30 @@ class ClientActions{
                 System.err.print("Error reading Line");
                 return false;
             }
-            System.err.print("xD: "+id);
+
             if (id.length()==0)
                 sendCommand("\"type\":\""+type+"\"", false);
             else
                 sendCommand("\"type\":\""+type+"\",\"id\":\""+id+"\"", false);
-            return true;
+
+            JsonObject payload = new JsonParser().parse( in ).getAsJsonObject();
+            JsonObject data = cry.processPayloadRecv(payload , session.getSharedSecret());
+            JsonArray result = data.getAsJsonArray("data");
+
+            UserDescription oneUser;
+            String uuid, status;
+            int idOneUser;
+            for ( JsonElement user : result ){
+                JsonObject u = user.getAsJsonObject();
+                oneUser = new UserDescription(u,null);
+                idOneUser = oneUser.getId();
+                uuid = oneUser.getUUID();
+                status = String.valueOf(oneUser.isValid(cc));
+                System.out.printf("%2d - %44s\nStatus: %s\n\n", idOneUser, uuid, status);
+            }
+
+
+            return false;
         }
 
         //  3- List new messages received by a user
@@ -406,15 +424,13 @@ class ClientActions{
     printMenu(){
         System.out.printf(  "\nMenu Options:\n"+
                         "#==============================================#\n"+
-                        "| 1- Create a user message box                 |\n"+
-                        "| 2- List users’ messages boxes                |\n"+
-                        "| 3- List new messages received by a user      |\n"+
-                        "| 4- List all messages received by a user      |\n"+
-                        "| 5- Send message to a user                    |\n"+
-                        "| 6- Receive a message from a user message box |\n"+
+                        "| 2- List Existing Users                       |\n"+
+                        "| 3- List New messages                         |\n"+
+                        "| 4- List All messages                         |\n"+
+                        "| 5- Send message                              |\n"+
+                        "| 6- Receive a message                         |\n"+
                         "| 7- Send receipt for a message                |\n"+
                         "| 8- List messages sent and their receipts     |\n"+
-                        "| 9- Connect to Server                         |\n"+
                         "| 0- Close Conection                           |\n"+
                         "#==============================================|\n"+
                         "opt -> "

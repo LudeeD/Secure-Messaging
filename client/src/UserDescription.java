@@ -17,22 +17,33 @@ class UserDescription{
         this.pr = pr;
     }
 
-    UserDescription
-    getInstance(){
-        // With a uid and the result of a list commant returns a User description
-        return null;
-    }
-
     int
     getId(){
         // Return User ID from description
         return this.description.get("id").getAsInt();
     }
 
+    String
+    getUUID(){
+        // Return User ID from description
+        return this.description.get("uuid").getAsString();
+    }
+
     boolean
-    isValid(){
-        // Check if Signature and PublicKey Match
-        return false;
+    isValid( CCOperations cc ){
+        // Check if Signature and PublicKey
+
+        String ln = System.getProperty("line.separator");
+        String signature =  this.description.get("signature").getAsString();
+        String toVerify  =  this.description.get("uuid").getAsString()+ln+
+                            getPublicKeyString()+ln+
+                            getCertString();
+        PublicKey pubK = getCertKey();
+        System.out.println("Signature Validation: "+cc.verifySign( toVerify, signature, pubK ));
+
+        System.out.println("Checking Validation Chain");
+        cc.checkCertChain(getCert());
+        return cc.verifySign( toVerify, signature, pubK );
     }
 
     PublicKey
@@ -59,6 +70,20 @@ class UserDescription{
             return cer.getPublicKey();
         }catch(Exception e){
             System.err.print("Error geting User pubk");
+            System.exit(1);
+        }
+        return null;
+    }
+
+    X509Certificate
+    getCert(){
+        try{
+            CertificateFactory fact = CertificateFactory.getInstance("X.509");
+            X509Certificate cer = (X509Certificate) fact.generateCertificate(
+                    new ByteArrayInputStream(getCertString().getBytes()));
+            return cer;
+        }catch(Exception e){
+            System.err.print("Error geting User Certificate");
             System.exit(1);
         }
         return null;

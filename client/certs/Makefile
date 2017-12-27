@@ -5,8 +5,8 @@ JAVAC = javac
 KS_PWD = password
 
 CC_ROOTS = \
-	https://pkiroot.multicert.com/cert/MCRootCA.cer
-    #https://www.digicert.com/CACerts/BaltimoreCyberTrustRoot.crt \
+    https://www.digicert.com/CACerts/BaltimoreCyberTrustRoot.crt \
+	#https://pkiroot.multicert.com/cert/MCRootCA.cer
 
 CC_STATE_ROOTS = \
     https://www.scee.gov.pt/media/1709/ECRaizEstado.crt

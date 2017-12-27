@@ -35,79 +35,86 @@ class CCOperations{
     }
 
     boolean
-    checkCertChain() throws Exception {
-        X509Certificate cac = (X509Certificate) ks.getCertificate("CITIZEN AUTHENTICATION CERTIFICATE");
+    checkCertChain(X509Certificate cac){
+        try{
+            // X509Certificate cac = (X509Certificate) ks.getCertificate("CITIZEN AUTHENTICATION CERTIFICATE");
+            //
+            // System.out.println("=== CAC ===\n");
+            // System.out.println(cac);
 
-        //System.out.println("=== CAC ===\n");
-        //System.out.println(cac);
+            KeyStore allCerts = KeyStore.getInstance(KeyStore.getDefaultType());
+            allCerts.load(new FileInputStream("certs/CC_KS"), "password".toCharArray());
+            // System.out.println("size->"+allCerts.size());
+            allCerts.setCertificateEntry("CITIZEN AUTHENTICATION CERTIFICATE", cac);
+            // System.out.println("size->"+allCerts.size());
 
-        KeyStore allCerts = KeyStore.getInstance(KeyStore.getDefaultType());
-        allCerts.load(new FileInputStream("certs/CC_KS"), "password".toCharArray());
-        //System.out.println("size->"+allCerts.size());
-        allCerts.setCertificateEntry("CITIZEN AUTHENTICATION CERTIFICATE", cac);
-        //System.out.println("size->"+allCerts.size());
-        promptEnterKey();
+            Enumeration<String> aliases = allCerts.aliases();
+            //for (Enumeration<String> aliases = allCerts.aliases(); aliases.hasMoreElements();)
+            //    System.out.println(aliases.nextElement());
 
-        Enumeration<String> aliases = allCerts.aliases();
-        //for (Enumeration<String> aliases = allCerts.aliases(); aliases.hasMoreElements();)
-        //    System.out.println(aliases.nextElement());
-
-        X509Certificate cert;
-        String alias;
-        PublicKey pubK;
-        Set<TrustAnchor> anchors = new HashSet<TrustAnchor>();
-        Set<X509Certificate> intermediates = new HashSet<X509Certificate>();
-        while(aliases.hasMoreElements()){
-            alias = aliases.nextElement();
-            if(allCerts.isCertificateEntry(alias)){
-                //System.out.println("Is a Certificate");
-                cert = (X509Certificate) allCerts.getCertificate(alias);
-                //System.out.print(cert);
-                pubK = cert.getPublicKey();
-                try{
-                    cert.verify(pubK);
-                    //System.out.println("Anchor");
-                    anchors.add(new TrustAnchor(cert, null));
-                }catch (Exception e){
-                    //System.out.println("Intermediate");
-                    intermediates.add(cert);
+            X509Certificate cert;
+            String alias;
+            PublicKey pubK;
+            Set<TrustAnchor> anchors = new HashSet<TrustAnchor>();
+            Set<X509Certificate> intermediates = new HashSet<X509Certificate>();
+            while(aliases.hasMoreElements()){
+                // promptEnterKey();
+                alias = aliases.nextElement();
+                if(allCerts.isCertificateEntry(alias)){
+                    // System.out.println("Is a Certificate");
+                    cert = (X509Certificate) allCerts.getCertificate(alias);
+                    // System.out.print(cert);
+                    pubK = cert.getPublicKey();
+                    try{
+                        cert.verify(pubK);
+                        // System.out.println("Anchor");
+                        anchors.add(new TrustAnchor(cert, null));
+                    }catch (Exception e){
+                        // System.out.println("Intermediate");
+                        intermediates.add(cert);
+                    }
+                }else{
+                    System.out.println("Not a Certificate");
                 }
-            }else{
-                System.out.println("Not a Certificate");
             }
+
+            // System.out.println("Anchors Size->"+anchors.size());
+            // System.out.println("Intermediates Size->"+intermediates.size());
+
+            Security.setProperty("ocsp.enable", "true");
+            System.setProperty("com.sun.security.enableCRLDP", "true");
+
+            X509CertSelector selector = new X509CertSelector();
+            selector.setCertificate(cac);
+
+            PKIXBuilderParameters pkixParams = new PKIXBuilderParameters(anchors,selector);
+            //pkixParams.setRevocationEnabled(false);
+
+            CollectionCertStoreParameters interCertsParams = new CollectionCertStoreParameters(intermediates);
+            CertStore interCerts = CertStore.getInstance("Collection", interCertsParams);
+            pkixParams.addCertStore(interCerts);
+
+            CollectionCertStoreParameters ccsp = new CollectionCertStoreParameters(intermediates);
+            CertStore intermediateCertStore = CertStore.getInstance("Collection", ccsp);
+
+            pkixParams.addCertStore(intermediateCertStore);
+
+            CertPathBuilder builder = CertPathBuilder.getInstance("PKIX");
+            PKIXCertPathBuilderResult path = (PKIXCertPathBuilderResult)builder.build(pkixParams);
+
+            // System.out.println(path);
+            CertPathValidator cpv = CertPathValidator.getInstance("PKIX");
+            PKIXParameters validationParams = new PKIXParameters(anchors);
+            //validationParams.setRevocationEnabled(false);
+            validationParams.setDate(new Date());
+            System.out.println(cpv.validate(path.getCertPath(),validationParams));
+            return true;
+
+        }catch (Exception e){
+            System.err.println("Error Certifying chain " +e);
+            return false;
         }
-
-        System.out.println("Anchors Size->"+anchors.size());
-        System.out.println("Intermediates Size->"+intermediates.size());
-
-
-        X509CertSelector selector = new X509CertSelector();
-        selector.setCertificate(cac);
-
-        PKIXBuilderParameters pkixParams= new PKIXBuilderParameters(anchors,selector);
-        pkixParams.setRevocationEnabled(false);
-
-        CollectionCertStoreParameters interCertsParams = new CollectionCertStoreParameters(intermediates);
-        CertStore interCerts = CertStore.getInstance("Collection", interCertsParams);
-        pkixParams.addCertStore(interCerts);
-
-        CollectionCertStoreParameters ccsp = new CollectionCertStoreParameters(intermediates);
-        CertStore intermediateCertStore = CertStore.getInstance("Collection", ccsp);
-
-        pkixParams.addCertStore(intermediateCertStore);
-
-        CertPathBuilder builder = CertPathBuilder.getInstance("PKIX");
-        PKIXCertPathBuilderResult path = (PKIXCertPathBuilderResult)builder.build(pkixParams);
-
-        System.out.println(path);
-        promptEnterKey();
-        CertPathValidator cpv = CertPathValidator.getInstance("PKIX");
-        PKIXParameters validationParams = new PKIXParameters(anchors);
-        validationParams.setRevocationEnabled(false);
-        validationParams.setDate(new Date());
-        System.out.println(cpv.validate(path.getCertPath(),validationParams));
-        return true;
-    }
+   }
 
 
     String
@@ -177,8 +184,7 @@ class CCOperations{
             System.err.println("Error Signing with CC : " + e);
             return null;
         }
-        // Verify
-        }
+    }
 
     boolean
     verifySign(String toVerify, String signature, PublicKey pubk){
@@ -187,7 +193,6 @@ class CCOperations{
             verif.initVerify(pubk);
             verif.update(toVerify.getBytes());
             boolean verification = verif.verify(Base64.getDecoder().decode(signature));
-            System.out.println("Verification: "+verification);
             return verification;
         }catch (Exception e){
             System.err.println("Error Verifying Signature with CC : " + e);
