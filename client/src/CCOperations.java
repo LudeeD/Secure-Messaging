@@ -107,8 +107,14 @@ class CCOperations{
             PKIXParameters validationParams = new PKIXParameters(anchors);
             //validationParams.setRevocationEnabled(false);
             validationParams.setDate(new Date());
-            System.out.println(cpv.validate(path.getCertPath(),validationParams));
-            return true;
+            System.out.println();
+            try{
+                cpv.validate(path.getCertPath(),validationParams);
+                return true;
+            }catch (Exception e){
+                System.out.println("Could not validate Certificate Chain "+e);
+                return false;
+            }
 
         }catch (Exception e){
             System.err.println("Error Certifying chain " +e);

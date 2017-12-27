@@ -39,11 +39,9 @@ class UserDescription{
                             getPublicKeyString()+ln+
                             getCertString();
         PublicKey pubK = getCertKey();
-        System.out.println("Signature Validation: "+cc.verifySign( toVerify, signature, pubK ));
-
-        System.out.println("Checking Validation Chain");
-        cc.checkCertChain(getCert());
-        return cc.verifySign( toVerify, signature, pubK );
+        System.out.print("Signature Valid: "+cc.verifySign( toVerify, signature, pubK ));
+        System.out.print("Cert Chain Valid: " + cc.checkCertChain(getCert()));
+        return cc.verifySign( toVerify, signature, pubK ) && cc.checkCertChain(getCert());
     }
 
     PublicKey

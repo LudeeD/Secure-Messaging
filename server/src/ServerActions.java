@@ -6,6 +6,10 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import com.google.gson.*;
 import com.google.gson.stream.*;
+import java.security.*;
+import java.security.spec.*;
+import java.security.cert.*;
+import java.io.*;
 
 class ServerActions implements Runnable {
 
@@ -17,6 +21,7 @@ class ServerActions implements Runnable {
     ServerControl registry;
     DHSession session = null;
     CryServerOperations cry;
+    String currUUID;
 
     ServerActions ( Socket c, ServerControl r ) throws Exception{
         client = c;
@@ -103,6 +108,14 @@ class ServerActions implements Runnable {
             try{
                 pubk = data.get( "pubk" ).getAsString();
                 session = new DHSession(pubk);
+
+                currUUID = data.get( "cert" ).getAsString();
+                CertificateFactory fact = CertificateFactory.getInstance("X.509");
+                X509Certificate cer = (X509Certificate) fact.generateCertificate(
+                    new ByteArrayInputStream(currUUID.getBytes()));
+                MessageDigest digest = MessageDigest.getInstance("SHA-256");
+                byte[] hash = digest.digest(cer.getEncoded());
+                currUUID =  Base64.getEncoder().encodeToString(hash);
 
                 pubk = session.getStringPubKey();
                 //cert = cry.getCertString();
@@ -265,6 +278,10 @@ class ServerActions implements Runnable {
             }
 
             // Read message
+
+            JsonElement f = registry.getUser(fromId);
+            if (!currUUID.equals(f.getAsJsonObject().get( "uuid" ).getAsString()))
+                sendResult( null, "\"You cannot acess this messagebox\"" , false);
 
             String response = registry.recvMessage( fromId, msg.getAsString() );
 

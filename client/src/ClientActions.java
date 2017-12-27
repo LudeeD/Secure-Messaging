@@ -91,14 +91,6 @@ class ClientActions{
             return false;
         }
 
-        if (opt == 9) {
-       }
-
-        // 1- Create new User
-        if (opt == 1) {
-            System.out.println("Moved");
-                    }
-
         // 2- List users’ messages boxes
         if (opt == 2) {
             String type = "list";
@@ -123,13 +115,15 @@ class ClientActions{
             UserDescription oneUser;
             String uuid, status;
             int idOneUser;
+            System.out.println("=== Users ===\n id - uuid\n");
             for ( JsonElement user : result ){
                 JsonObject u = user.getAsJsonObject();
                 oneUser = new UserDescription(u,null);
                 idOneUser = oneUser.getId();
                 uuid = oneUser.getUUID();
+                System.out.printf("%2d - %44s\n", idOneUser, uuid);
                 status = String.valueOf(oneUser.isValid(cc));
-                System.out.printf("%2d - %44s\nStatus: %s\n\n", idOneUser, uuid, status);
+                System.out.printf("Final Status: %s\n\n", status);
             }
 
 
@@ -222,14 +216,17 @@ class ClientActions{
         // 6- Receive a message from a user message box
         if (opt == 6) {
             String type = "recv";
-            String id = ""+currUser.getId();
+            //String id = ""+currUser.getId();
+            String id;
             String srcId = "";
             String msg = "";
             String subType= "list";
             String[] receivedResult;
             String pubk;
-            System.out.print("msg id: ");
             try{
+                System.out.print("id: ");
+                id = br.readLine();
+                System.out.print("msg id: ");
                 msg = br.readLine();
             }catch(Exception e){
                 System.err.print("Error reading Line");
