@@ -255,6 +255,13 @@ class ServerActions implements Runnable {
         if (cmd.getAsString().equals( "recv" )) {
             JsonElement id = data.get( "id" );
             JsonElement msg = data.get( "msg" );
+            String nonceToReceipt = cry.generateNonce();
+
+            System.out.println("NONCE    ->  "+Base64.getDecoder().decode(nonceToReceipt));
+            System.out.println("NONCESize    ->  "+Base64.getDecoder().decode(nonceToReceipt).length);
+            //WRITE NONCE ON message
+
+
 
             if (id == null || msg == null) {
                 System.err.print ( "Badly formated \"recv\" request: " + data );
@@ -277,6 +284,10 @@ class ServerActions implements Runnable {
                 return;
             }
 
+            //write nonce in the file
+            registry.registerNonce(fromId, msg.getAsString(),nonceToReceipt);
+
+
             // Read message
 
             JsonElement f = registry.getUser(fromId);
@@ -295,7 +306,7 @@ class ServerActions implements Runnable {
             JsonElement id = data.get( "id" );
             JsonElement msg = data.get( "msg" );
             JsonElement receipt = data.get( "receipt" );
-
+            JsonElement nonce = data.get( "nonce" );
             if (id == null || msg == null || receipt == null) {
                 System.err.print ( "Badly formated \"receipt\" request: " + data );
                 sendResult( null, "\"wrong request format\"" , false);
@@ -309,7 +320,12 @@ class ServerActions implements Runnable {
                 sendResult( null, "\"wrong parameters\"" , false);
                 return;
             }
-
+            
+            if(registry.compareNonce(nonce.getAsString(),fromId,msg.getAsString())==false){
+              System.err.print ("Nonce is not valid " );
+              sendResult( null, "\"wrong nonce\"" , false);
+              return;
+            }
             // Store receipt
 
             registry.storeReceipt( fromId, msg.getAsString(), receipt.getAsString() );

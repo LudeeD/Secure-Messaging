@@ -75,6 +75,14 @@ class CryServerOperations{
         }
     }
 
+    String
+    generateNonce() {
+        SecureRandom secureRandom = new SecureRandom();
+        byte[] nonce = new byte[16];
+        secureRandom.nextBytes(nonce);
+        return Base64.getEncoder().encodeToString(nonce);
+    }
+
     String[]
     processPayloadSend(String payload, byte[] sessionKey){
         try{

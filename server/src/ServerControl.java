@@ -7,6 +7,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.Date;
 import com.google.gson.*;
+import java.io.RandomAccessFile;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 
 class ServerControl {
     ConcurrentSkipListSet<UserDescription> users = null;
@@ -83,6 +86,33 @@ class ServerControl {
         f.flush();
         f.close();
     }
+    //CREATED BY US
+    private void
+    addToFile(String path, String text) throws Exception {
+      FileWriter f = new FileWriter( path, true ); //add to file
+      f.write( text );
+      f.flush();
+      f.close();
+    }
+
+    private void
+    changeNonce(String path, String text) throws Exception {
+      RandomAccessFile file = new RandomAccessFile(path, "rw");
+      long length = file.length() - 1;
+      byte b;
+      do {
+          length -= 1;
+          file.seek(length);
+          b = file.readByte();
+      } while(b != 10);
+      file.setLength(length+1);
+      file.close();
+
+      FileWriter file1 = new FileWriter( path, true ); //add to file
+      file1.write( text );
+      file1.flush();
+      file1.close();
+    }
 
     private String
     readFromFile ( String path ) throws Exception {
@@ -92,6 +122,96 @@ class ServerControl {
         f.close();
 
         return new String( buffer, StandardCharsets.UTF_8 );
+    }
+    //CREATED BY US
+    private String
+    readNonce(String path) throws Exception {
+
+      FileInputStream in = new FileInputStream(path);
+      BufferedReader br = new BufferedReader(new InputStreamReader(in));
+
+      String strLine = null, tmp;
+
+      while ((tmp = br.readLine()) != null)
+      {
+        strLine = tmp;
+      }
+
+      String nonce = strLine;
+
+      in.close();
+      return nonce;
+    }
+    //CREATED BY US
+    void
+    registerNonce(int id, String msg, String nonce) {
+      String path = userMessageBox( id ) + "/";
+      if (msg.charAt( 0 ) == '_') { // Already red
+          path += msg;
+          try{
+            changeNonce(path, nonce);
+          }catch(Exception e){
+            System.err.print("Error adding nonce to file" + e);
+          }
+      } else {
+          File f = new File( path + "_" + msg );
+          if (f.exists()) {         // Already red
+              path += "_" + msg;
+              try{
+                changeNonce(path, nonce);
+              }catch(Exception e){
+                System.err.print("Error adding nonce to file" + e);
+              }
+          }
+          else { //no red
+            path += msg;
+            try{
+              addToFile(path, "\n".concat(nonce));
+            }catch(Exception e){
+              System.err.print("Error adding nonce to file" + e);
+            }
+
+          }
+      }
+
+
+    }
+    //CREATED BY US
+    boolean compareNonce(String nonce,int id, String msg){
+      String path = userMessageBox( id ) + "/";
+      String nonceFromFile="";
+      if (msg.charAt( 0 ) == '_') { // Already red
+          path += msg;
+          try{
+            nonceFromFile = readNonce(path);
+          }catch(Exception e){
+            System.err.print("Error reading nonce from file" + e);
+          }
+      } else {
+          File f = new File( path + "_" + msg );
+          if (f.exists()) {         // Already red
+              path += "_" + msg;
+              try{
+                nonceFromFile = readNonce(path);
+              }catch(Exception e){
+                System.err.print("Error reading nonce from file" + e);
+              }
+          }
+          else { //no red
+            path += msg;
+            try{
+              nonceFromFile = readNonce(path);
+            }catch(Exception e){
+              System.err.print("Error reading nonce from file" + e);
+            }
+          }
+          System.out.println(path);
+      }
+
+      if(nonceFromFile.equals(nonce)){
+        return true;
+      }
+      return false;
     }
 
     boolean
@@ -292,7 +412,7 @@ class ServerControl {
             path += msg;
         } else {
             File f = new File( path + "_" + msg );
-            if (f.exists()) {         // Already red  
+            if (f.exists()) {         // Already red
                 path += "_" + msg;
             }
             else { // Rename before reading
@@ -410,5 +530,3 @@ class ServerControl {
     }
 
 }
-
-

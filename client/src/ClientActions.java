@@ -250,6 +250,7 @@ class ClientActions{
                     System.out.println("Warning, Problems with the Signature");
                 }
 
+                cry.set_noncereceipt(receivedResult[3],msg);
 
                 //System.out.println( "AES KEY (base 64) " + receivedResult[0]);
                 byte[] aesKey = cry.decrRSA(receivedResult[0], currUser.getPrivateKey());
@@ -268,7 +269,7 @@ class ClientActions{
             String type = "receipt";
             String id = "";
             String msg = "";
-            String receipt = "";
+              String receipt = "";
             System.out.print("id: ");
             try{
                 id = br.readLine();
@@ -285,9 +286,10 @@ class ClientActions{
             }
             System.out.print("calculating receipt... ");
             receipt="teste";
-            sendCommand("\"type\":\""+type+"\",\"id\":\""+id+"\",\"msg\":\""+msg+"\",\"receipt\":\""+receipt+"\"", false);
+            sendCommand("\"type\":\""+type+"\",\"id\":\""+id+"\",\"msg\":\""+msg+"\",\"receipt\":\""+receipt+"\",\"nonce\":\""+cry.get_noncereceipt(msg)+"\"", false);
             return false;
         }
+
         // 8-  List messages sent and their receipts
         if (opt == 8) {
             String type = "status";
