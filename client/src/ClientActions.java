@@ -41,7 +41,7 @@ class ClientActions{
 
     void
     readResponse () {
-    System.out.println("Reading Response..");
+        //System.out.println("Reading Response..");
         try {
             JsonElement data = new JsonParser().parse( in );
             if (session == null && data.isJsonObject()){
@@ -79,9 +79,9 @@ class ClientActions{
                 expectedNonce = result[3];
             }
 
-            System.out.println( "Send cmd: " + msg );
+            //System.out.println( "Send cmd: " + msg );
             out.write ( msg.getBytes( StandardCharsets.UTF_8 ) );
-            System.out.println("Sent!!!!");
+            //System.out.println("Sent!!!!");
         }catch (Exception e){
             System.err.print ( "Error while sending cmd to socket "+e);
         }
@@ -145,17 +145,11 @@ class ClientActions{
         // 4- List all messages received by a user
         if (opt == 4) {
             String type = "all";
-            String id = "";
-            System.out.print("id: ");
-            try{
-                id = br.readLine();
-            }catch(Exception e){
-                System.err.print("Error reading Line");
-                return false;
-            }
+            String id = ""+currUser.getId();
             sendCommand("\"type\":\""+type+"\",\"id\":\""+id+"\"", false);
             return true;
         }
+
         // 5 - Send message to a user
         if (opt == 5) {
             String type = "send";
@@ -220,16 +214,13 @@ class ClientActions{
         // 6- Receive a message from a user message box
         if (opt == 6) {
             String type = "recv";
-            //String id = ""+currUser.getId();
-            String id;
+            String id = ""+currUser.getId();
             String srcId = "";
             String msg = "";
             String subType= "list";
             String[] receivedResult;
             String pubk;
             try{
-                System.out.print("id: ");
-                id = br.readLine();
                 System.out.print("msg id: ");
                 msg = br.readLine();
             }catch(Exception e){
@@ -251,7 +242,7 @@ class ClientActions{
                 UserDescription senderUser = new UserDescription(result,null);
 
                 if(!cc.verifySign(receivedResult[0].concat("\n").concat(receivedResult[1]), receivedResult[2],senderUser.getCertKey())){
-                    System.out.println("Warning, Problems with the Signature");
+                    System.err.println("Warning, Problems with the Signature");
                 }
 
                 cry.set_noncereceipt(receivedResult[3],msg);
@@ -265,7 +256,6 @@ class ClientActions{
                 //to use in receipts
                 cry.set_readMessageSign(cc.sign(decrMsg),msg);
                 //#######################//
-                System.out.println(decrMsg);
             }catch(Exception e){
                 System.err.print("Error receiving Message" + e);
                 return false;
@@ -276,16 +266,9 @@ class ClientActions{
         // 7-  Send receipt for a message
         if (opt == 7) {
             String type = "receipt";
-            String id = "";
+            String id = ""+currUser.getId();
             String msg = "";
-              String receipt = "";
-            System.out.print("id: ");
-            try{
-                id = br.readLine();
-            }catch(Exception e){
-                System.err.print("Error reading Line");
-                return false;
-            }
+            String receipt = "";
             System.out.print("msg id: ");
             try{
                 msg = br.readLine();
@@ -293,10 +276,10 @@ class ClientActions{
                 System.err.print("Error reading Line");
                 return false;
             }
-            System.out.print("calculating receipt... ");
+            //System.out.print("calculating receipt... ");
             //SIGNATURE+MESSSAGE
             receipt=cry.get_readMessageSign(msg);
-            System.out.println("Receipt: "+receipt);
+            //System.out.println("Receipt: "+receipt);
             sendCommand("\"type\":\""+type+"\",\"id\":\""+id+"\",\"msg\":\""+msg+"\",\"receipt\":\""+receipt+"\",\"nonce\":\""+cry.get_noncereceipt(msg)+"\"", false);
             return false;
         }
@@ -304,15 +287,8 @@ class ClientActions{
         // 8-  List messages sent and their receipts
         if (opt == 8) {
             String type = "status";
-            String id = "";
+            String id = ""+currUser.getId();
             String msg = "";
-            System.out.print("id: ");
-            try{
-                id = br.readLine();
-            }catch(Exception e){
-                System.err.print("Error reading Line");
-                return false;
-            }
             System.out.print("msg id: ");
             try{
                 msg = br.readLine();
@@ -322,11 +298,53 @@ class ClientActions{
             }
 
             sendCommand("\"type\":\""+type+"\",\"id\":\""+id+"\",\"msg\":\""+msg+"\"", false);
-            return true;
+
+            verifyReceipts();
+
+            return false;
         }
 
         sendCommand( "\"Unknown request\"", true);
         return false;
+    }
+
+    void
+    verifyReceipts(){
+        JsonObject data = new JsonParser().parse( in ).getAsJsonObject();
+        data = cry.processPayloadRecv(data , session.getSharedSecret(), expectedNonce);
+        JsonObject result = data.getAsJsonObject("result");
+
+        String message = result.get("msg").getAsString();
+        String[] receivedResult = message.split("\n");
+
+        byte[] aesKey = cry.decrRSA(receivedResult[0], currUser.getPrivateKey());
+        String decrMsg = cry.decrAES(receivedResult[1], aesKey);
+        System.out.println("=== Status of Message ===");
+        System.out.println("Text of Message: " + decrMsg);
+
+        JsonArray receipts = result.get("receipts").getAsJsonArray();
+        System.out.printf("\n");
+        for ( JsonElement rec : receipts ){
+            JsonObject r = rec.getAsJsonObject();
+            System.out.println(new Date(r.get("date").getAsLong()));
+
+            sendCommand("\"type\":\"list\",\"id\":\""+r.get("id").getAsString()+"\"",false);
+            JsonObject datia = new JsonParser().parse( in ).getAsJsonObject();
+            datia = cry.processPayloadRecv(datia, session.getSharedSecret(), expectedNonce);
+            JsonObject resulta = datia.getAsJsonArray("data").get(0).getAsJsonObject();
+            UserDescription senderUser = new UserDescription(resulta,null);
+
+            System.out.println("Veryifying Sender of Receipt");
+            if( !senderUser.isValid( cc ) ){
+                System.out.println("Something went wrong validating the receipt sender");
+                return;
+            }
+
+            System.out.print("Valid Receipt: ");
+            String recas = r.get("receipt").getAsString();
+            System.out.println(cc.verifySign(decrMsg, recas, senderUser.getCertKey()));
+            System.out.printf("\n");
+        }
     }
 
     boolean
@@ -361,14 +379,14 @@ class ClientActions{
                             "\"cert\":\""+cert+"\","+
                             "\"signature\":\""+sign+"\"", false);
 
-            System.out.println("Sent new User Creatin");
+            //System.out.println("Sent new User Creatin");
             payload = new JsonParser().parse( in ).getAsJsonObject();
             data = cry.processPayloadRecv(payload , session.getSharedSecret(), expectedNonce);
-            System.out.println(data);
+            //System.out.println(data);
             id = data.get( "result" ).getAsString();
         }
 
-        System.out.println("Going to list");
+        //System.out.println("Going to list");
         // Issue a LIST and build UserDescription currUser
         type = "list";
 
@@ -389,13 +407,13 @@ class ClientActions{
             }
         }
 
-        System.out.println("No User Exists");
+        System.err.println("No User Exists");
         return false;
     }
 
     void
     establishSession(){
-        System.out.print("Establishing Session...");
+        //System.out.print("Establishing Session...");
         String type = "session";
         String ln = System.getProperty("line.separator");
         String pubk = "Something is not right";
@@ -426,7 +444,7 @@ class ClientActions{
             System.err.print("Error Establishing Session 2" + e);
             System.exit(1);
         }
-        System.out.print("OK\n");
+        //System.out.print("OK\n");
     }
 
     // Print Menu Options

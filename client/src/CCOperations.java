@@ -22,7 +22,7 @@ class CCOperations{
         try{
             p = new sun.security.pkcs11.SunPKCS11(f);
             Security.addProvider( p );
-            System.out.println("Addedd provider");
+            //System.out.println("Addedd provider");
             ks = KeyStore.getInstance( "PKCS11", "SunPKCS11-PTeID");
             ks.load(null, null);
             provider = true;
@@ -107,12 +107,13 @@ class CCOperations{
             PKIXParameters validationParams = new PKIXParameters(anchors);
             //validationParams.setRevocationEnabled(false);
             validationParams.setDate(new Date());
-            System.out.println();
+            //System.out.println();
+
             try{
                 cpv.validate(path.getCertPath(),validationParams);
                 return true;
             }catch (Exception e){
-                System.out.println("Could not validate Certificate Chain "+e);
+                System.err.println("Could not validate Certificate Chain "+e);
                 return false;
             }
 
@@ -154,7 +155,7 @@ class CCOperations{
 
     void
     writeCert() throws Exception{
-        System.out.println("Write Cert");
+        //System.out.println("Write Cert");
         String BEGIN_CERT = "-----BEGIN CERTIFICATE-----";
         String END_CERT = "-----END CERTIFICATE-----";
         String LINE_SEPARATOR = System.getProperty("line.separator");
@@ -168,11 +169,11 @@ class CCOperations{
 
     void
     readCert() throws Exception{
-        System.out.println("Read Cert");
+        //System.out.println("Read Cert");
         CertificateFactory fact = CertificateFactory.getInstance("X.509");
         InputStream is = Files.newInputStream(Paths.get("./teste2.pem"));
         X509Certificate cer = (X509Certificate) fact.generateCertificate(is);
-        System.out.println(cer.toString());
+        //System.out.println(cer.toString());
         return;
     }
 

@@ -249,7 +249,7 @@ class CryOperations{
     String[]
     processPayloadSend(String payload, byte[] sessionKey){
         try{
-            System.out.print("Encrypting Payload...");
+            //System.out.print("Encrypting Payload...");
             byte[] keyForMac = Arrays.copyOfRange(sessionKey, 0, sessionKey.length/2);
             byte[] keyForEnc = Arrays.copyOfRange(sessionKey, sessionKey.length/2, sessionKey.length);
             byte[] encpayload = null;
@@ -259,14 +259,14 @@ class CryOperations{
             cipher.init(Cipher.ENCRYPT_MODE, sks);
             iv = cipher.getIV();
             encpayload = cipher.doFinal(payload.getBytes());
-            System.out.print("OK\n");
+            //System.out.print("OK\n");
 
-            System.out.print("Generate Mac...");
+            //System.out.print("Generate Mac...");
             Mac sha256HMAC = Mac.getInstance("HmacSHA256");
             SecretKeySpec keyMAC = new SecretKeySpec(keyForMac, "HmacSHA256");
             sha256HMAC.init(keyMAC);
             byte[] mac = sha256HMAC.doFinal(encpayload);
-            System.out.print("OK\n");
+            //System.out.print("OK\n");
 
             String[] result = new String[4];
             result[0] = Base64.getEncoder().encodeToString(encpayload);
@@ -274,7 +274,7 @@ class CryOperations{
             result[2] = Base64.getEncoder().encodeToString(mac);
 
             // Add nonces
-            System.out.print("Generate Nonce...");
+            // System.out.print("Generate Nonce...");
             byte bytes[] = new byte[8];
             random.nextBytes(bytes);
             System.out.print(Base64.getEncoder().encodeToString(bytes)+ "OK\n");
@@ -305,7 +305,6 @@ class CryOperations{
             byte[] keyForMac = Arrays.copyOfRange(sessionKey, 0, sessionKey.length/2);
             Mac sha256HMAC = Mac.getInstance("HmacSHA256");
             SecretKeySpec keyMAC = new SecretKeySpec(keyForMac, "HmacSHA256");
-            System.out.print("Mac...");
             sha256HMAC.init(keyMAC);
             byte[] mac = sha256HMAC.doFinal(Base64.getDecoder().decode(elem.getAsString()));
 
@@ -314,9 +313,7 @@ class CryOperations{
                 System.out.println("Something Went wrong on the Mac");
                 return null;
             }
-            System.out.print("OK\n");
 
-            System.out.print("Decrypting...");
             byte[] keyForEnc = Arrays.copyOfRange(sessionKey, sessionKey.length/2, sessionKey.length);
             elem = payload.get("iv");
             Cipher decryCipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
@@ -328,7 +325,6 @@ class CryOperations{
             byte[] fin = decryCipher.doFinal(Base64.getDecoder().decode(elem.getAsString()));
             JsonElement data = new JsonParser().parse(new InputStreamReader(new ByteArrayInputStream(fin)));
             if (data.isJsonObject()) {
-                System.out.print("OK\n");
                 return data.getAsJsonObject();
             }
             return null;
