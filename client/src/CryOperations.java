@@ -15,7 +15,7 @@ class CryOperations{
     PublicKey pk;
     private PrivateKey pr;
     private HashMap<String, String> nonces = new HashMap<String, String>();
-    private HashMap<String, String[]> readMessages = new HashMap<String, String[]>();
+    private HashMap<String, String> readMessagesSign = new HashMap<String, String>();
 
     CryOperations () {
         System.out.println("Cryptography Operations!");
@@ -29,12 +29,12 @@ class CryOperations{
       return this.nonces.get(msg_id);
     }
     void
-    set_readMessage(String[] data, String msg_id){
-      this.messagesAssignatures.put(msg_id,data);
+    set_readMessageSign(String sing, String msg_id){
+      this.readMessagesSign.put(msg_id,sing);
     }
     String
-    get_readMessage(String msg_id){
-      return this.messagesAssignatures.get(msg_id);
+    get_readMessageSign(String msg_id){
+      return this.readMessagesSign.get(msg_id);
     }
     void
     generateKey(String path){

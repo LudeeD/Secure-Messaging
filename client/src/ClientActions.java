@@ -319,11 +319,8 @@ class ClientActions{
                 System.out.println( "MESSAGE (base 64) " + receivedResult[0]);
                 String decrMsg = cry.decrAES(receivedResult[1], aesKey);
                 //save signMessage
-                String[] data = new data[2];
                 //to use in receipts
-                data[0]=cc.sign(decrMsg);  //Singature
-                data[1]=decrMsg;            //plainText message
-                cry.set_readMessage(msg,data);
+                cry.set_readMessageSign(msg,cc.sign(decrMsg));
                 //#######################//
                 System.out.println(decrMsg);
             }catch(Exception e){
@@ -354,9 +351,8 @@ class ClientActions{
                 return false;
             }
             System.out.print("calculating receipt... ");
-            String[] readMessage = get_readMessage(msg);
             //SIGNATURE+MESSSAGE
-            receipt=readMessage[1].concat("\n").concat(readMessage[0]);
+            receipt=cry.get_readMessageSign(msg);
             sendCommand("\"type\":\""+type+"\",\"id\":\""+id+"\",\"msg\":\""+msg+"\",\"receipt\":\""+receipt+"\",\"nonce\":\""+cry.get_noncereceipt(msg)+"\"", false);
             return false;
         }
