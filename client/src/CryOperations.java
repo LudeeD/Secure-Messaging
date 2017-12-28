@@ -13,6 +13,11 @@ import com.google.gson.*;
 class CryOperations{
 
     private HashMap<String, String> nonces = new HashMap<String, String>();
+    private HashMap<String, String> readMessagesSign = new HashMap<String, String>();
+
+    CryOperations () {
+        System.out.println("Cryptography Operations!");
+    }
 
     void
     set_noncereceipt(String nonce, String msg_id){
@@ -21,7 +26,19 @@ class CryOperations{
 
     String
     get_noncereceipt(String msg_id){
-      return this.nonces.get(msg_id);
+        return this.nonces.get(msg_id);
+    }
+
+    void
+    set_readMessageSign(String sing, String msg_id){
+        System.out.println("Sign " + sing + "Msg_Id" + msg_id);
+        this.readMessagesSign.put(msg_id,sing);
+    }
+
+    String
+    get_readMessageSign(String msg_id){
+        System.out.println("Msg_Id" + msg_id);
+        return this.readMessagesSign.get(msg_id);
     }
 
     KeyPair
