@@ -303,7 +303,7 @@ class ServerActions implements Runnable {
                 sendResult( null, "\"wrong parameters\"" , false);
                 return;
             }
-            
+
             if(registry.compareNonce(nonce.getAsString(),fromId,msg.getAsString())==false){
               System.err.print ("Nonce is not valid " );
               sendResult( null, "\"wrong nonce\"" , false);
