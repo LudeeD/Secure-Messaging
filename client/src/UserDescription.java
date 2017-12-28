@@ -7,7 +7,7 @@ import java.io.*;
 
 class UserDescription{
 
-    JsonObject description;        // JSON user's description
+    private JsonObject description;        // JSON user's description
     private PrivateKey pr;
 
     UserDescription ( JsonObject description, PrivateKey pr ) {

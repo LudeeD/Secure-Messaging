@@ -12,6 +12,8 @@ import com.google.gson.*;
 
 class CryOperations{
 
+    SecureRandom random = new SecureRandom();
+
     private HashMap<String, String> nonces = new HashMap<String, String>();
     private HashMap<String, String> readMessagesSign = new HashMap<String, String>();
 
@@ -266,10 +268,17 @@ class CryOperations{
             byte[] mac = sha256HMAC.doFinal(encpayload);
             System.out.print("OK\n");
 
-            String[] result = new String[3];
+            String[] result = new String[4];
             result[0] = Base64.getEncoder().encodeToString(encpayload);
             result[1] = Base64.getEncoder().encodeToString(iv);
             result[2] = Base64.getEncoder().encodeToString(mac);
+
+            // Add nonces
+            System.out.print("Generate Nonce...");
+            byte bytes[] = new byte[8];
+            random.nextBytes(bytes);
+            System.out.print(Base64.getEncoder().encodeToString(bytes)+ "OK\n");
+            result[3] = Base64.getEncoder().encodeToString(bytes);
             return result;
         }catch( Exception e ){
             System.err.println("Error Processing Payload to Send " + e);
@@ -279,14 +288,18 @@ class CryOperations{
 
 
     JsonObject
-    processPayloadRecv( JsonObject payload,  byte[] sessionKey ){
+    processPayloadRecv( JsonObject payload,  byte[] sessionKey, String expectedNonce ){
         try{
             JsonElement elem = payload.get("type");
             if(elem.getAsString().equals("session")){
                 System.out.print("Session Establishment Process");
                 return payload;
             }
-
+            elem = payload.get("nonce");
+            if( !elem.getAsString().equals(expectedNonce) ){
+                System.err.println("Something went wrong with the nonce expected");
+                return null;
+            }
 
             elem = payload.get("payload");
             byte[] keyForMac = Arrays.copyOfRange(sessionKey, 0, sessionKey.length/2);

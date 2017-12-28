@@ -20,6 +20,7 @@ class ClientActions{
     DHSession session = null;
     boolean santos = false;
     UserDescription currUser;
+    String expectedNonce;
 
     ClientActions ( Socket c ) {
         server = c;
@@ -47,7 +48,7 @@ class ClientActions{
                 System.out.println(data.getAsJsonObject());
             }
             if (data.isJsonObject()) {
-                System.out.println(cry.processPayloadRecv(data.getAsJsonObject(),session.getSharedSecret()));
+                System.out.println(cry.processPayloadRecv(data.getAsJsonObject(),session.getSharedSecret(), expectedNonce));
             }
             //System.err.print ( "Error while reading command from socket (not a JSON object), connection will be shutdown\n" );
         } catch (Exception e) {
@@ -71,15 +72,18 @@ class ClientActions{
                 msg  = "{"+         "\"type\":\"payload\","+
                                     "\"payload\":\""+result[0]+"\","+
                                     "\"iv\":\""+result[1]+"\"," +
-                                    "\"mac\":\""+result[2]+"\""+
+                                    "\"mac\":\""+result[2]+"\","+
+                                    "\"nonce\":\""+result[3]+"\""+
                             "}";
+
+                expectedNonce = result[3];
             }
 
-            //System.out.println( "Send cmd: " + msg );
+            System.out.println( "Send cmd: " + msg );
             out.write ( msg.getBytes( StandardCharsets.UTF_8 ) );
-            //System.out.println("Sent!!!!");
+            System.out.println("Sent!!!!");
         }catch (Exception e){
-            System.err.print ( "Error while sending cmd to socket");
+            System.err.print ( "Error while sending cmd to socket "+e);
         }
     }
 
@@ -109,7 +113,7 @@ class ClientActions{
                 sendCommand("\"type\":\""+type+"\",\"id\":\""+id+"\"", false);
 
             JsonObject payload = new JsonParser().parse( in ).getAsJsonObject();
-            JsonObject data = cry.processPayloadRecv(payload , session.getSharedSecret());
+            JsonObject data = cry.processPayloadRecv(payload , session.getSharedSecret(), expectedNonce);
             JsonArray result = data.getAsJsonArray("data");
 
             UserDescription oneUser;
@@ -185,7 +189,7 @@ class ClientActions{
                 msgEnc = cry.encrAES(msg, keyAES);
                 sendCommand("\"type\":\""+subType+"\",\"id\":\""+dst+"\"",false);
                 JsonObject data = new JsonParser().parse( in ).getAsJsonObject();
-                JsonObject  jobject = cry.processPayloadRecv(data.getAsJsonObject(),session.getSharedSecret());
+                JsonObject  jobject = cry.processPayloadRecv(data.getAsJsonObject(),session.getSharedSecret(), expectedNonce);
                 JsonArray jarray = jobject.getAsJsonArray("data");
                 jobject = jarray.get(0).getAsJsonObject();
                 pubk = jobject.get("pubk").getAsString();
@@ -235,14 +239,14 @@ class ClientActions{
             sendCommand("\"type\":\""+type+"\",\"id\":\""+id+"\",\"msg\":\""+msg+"\"", false);
             try{
                 JsonObject  data = new JsonParser().parse( in ).getAsJsonObject();
-                JsonObject  jobject = cry.processPayloadRecv(data.getAsJsonObject(),session.getSharedSecret());
+                JsonObject  jobject = cry.processPayloadRecv(data.getAsJsonObject(),session.getSharedSecret(), expectedNonce);
                 JsonArray   jarray = jobject.getAsJsonArray("result");
                 receivedResult = jarray.get(1).getAsString().split("\n");
 
                 srcId=jarray.get(0).getAsString();
                 sendCommand("\"type\":\""+subType+"\",\"id\":\""+srcId+"\"",false);
                 data = new JsonParser().parse( in ).getAsJsonObject();
-                jobject = cry.processPayloadRecv(data, session.getSharedSecret());
+                jobject = cry.processPayloadRecv(data, session.getSharedSecret(), expectedNonce);
                 JsonObject result = jobject.getAsJsonArray("data").get(0).getAsJsonObject();
                 UserDescription senderUser = new UserDescription(result,null);
 
@@ -359,7 +363,7 @@ class ClientActions{
 
             System.out.println("Sent new User Creatin");
             payload = new JsonParser().parse( in ).getAsJsonObject();
-            data = cry.processPayloadRecv(payload , session.getSharedSecret());
+            data = cry.processPayloadRecv(payload , session.getSharedSecret(), expectedNonce);
             System.out.println(data);
             id = data.get( "result" ).getAsString();
         }
@@ -374,7 +378,7 @@ class ClientActions{
             sendCommand("\"type\":\""+type+"\",\"id\":\""+id+"\"", false);
 
         payload = new JsonParser().parse( in ).getAsJsonObject();
-        data = cry.processPayloadRecv(payload , session.getSharedSecret());
+        data = cry.processPayloadRecv(payload , session.getSharedSecret(), expectedNonce);
         JsonArray result = data.getAsJsonArray("data");
 
         for ( JsonElement user : result ){

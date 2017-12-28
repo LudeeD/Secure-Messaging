@@ -22,6 +22,7 @@ class ServerActions implements Runnable {
     DHSession session = null;
     CryServerOperations cry;
     String currUUID;
+    String currNonce;
 
     ServerActions ( Socket c, ServerControl r ) throws Exception{
         client = c;
@@ -46,7 +47,9 @@ class ServerActions implements Runnable {
                 return data.getAsJsonObject();
             }
             if (data.isJsonObject()) {
-                return cry.processPayloadRecv(data.getAsJsonObject(),session.getSharedSecret());
+                currNonce = data.getAsJsonObject().get("nonce").getAsString();
+                JsonObject r = cry.processPayloadRecv(data.getAsJsonObject(),session.getSharedSecret());
+                return r;
             }
             System.err.print ( "Error while reading command from socket (not a JSON object), connection will be shutdown\n" );
             return null;
@@ -77,7 +80,8 @@ class ServerActions implements Runnable {
                 msg  = "{\"type\":\"payload\","+
                         "\"payload\":\""+results[0]+"\","+
                         "\"iv\":\""+results[1]+"\"," +
-                        "\"mac\":\""+results[2]+"\""+
+                        "\"mac\":\""+results[2]+"\","+
+                        "\"nonce\":\""+currNonce+"\""+
                         "}";
             }
             //System.out.println( "Send result: " + msg );
