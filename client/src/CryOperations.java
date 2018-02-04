@@ -33,19 +33,24 @@ class CryOperations{
 
     void
     set_readMessageSign(String sing, String msg_id){
-        System.out.println("Sign " + sing + "Msg_Id" + msg_id);
+        //System.out.println("Sign " + sing + "Msg_Id" + msg_id);
         this.readMessagesSign.put(msg_id,sing);
     }
 
     String
     get_readMessageSign(String msg_id){
-        System.out.println("Msg_Id" + msg_id);
+        //System.out.println("Msg_Id" + msg_id);
         return this.readMessagesSign.get(msg_id);
     }
 
     KeyPair
-    generateKey(String path){
+    generateKey(String path, String passphrase, String salt){
         try{
+            SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+            KeySpec spec = new PBEKeySpec(passphrase.toCharArray(), salt.getBytes(), 65536, 256);
+            SecretKey tmp = factory.generateSecret(spec);
+            SecretKey secret = new SecretKeySpec(tmp.getEncoded(), "AES");
+
             KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA");
             kpg.initialize(2048);
             KeyPair keyPair = kpg.generateKeyPair();
@@ -53,8 +58,8 @@ class CryOperations{
                 System.out.println("Creating Default with Name teste");
                 path = "./teste";
             }
-            writeKey(keyPair.getPublic(), path + ".pub");
-            writeKey(keyPair.getPrivate(), path + ".key");
+            writeKey(keyPair.getPublic(), path + ".pub", null);
+            writeKey(keyPair.getPrivate(), path + ".key", secret);
             return keyPair;
         }catch (Exception e){
             System.err.print("Error Generating Key: "+e);
@@ -64,29 +69,45 @@ class CryOperations{
     }
 
     void
-    writeKey(Key k, String path){
+    writeKey(Key k, String path, SecretKey secret){
         try{
-            Files.write(Paths.get(path), k.getEncoded());
+            if (secret == null) Files.write(Paths.get(path), k.getEncoded());
+            else{
+                String key = Base64.getEncoder().encodeToString(k.getEncoded());
+                String encr = encrAES(key,secret.getEncoded());
+                List<String> w = new ArrayList<String>();
+                w.add(encr);
+                Files.write(Paths.get(path), w);
+            }
         }catch (Exception e){
             System.err.print("Error Writing Key: "+e);
         }
     }
 
     Key
-    readKey(boolean pub, String path){
+    readKey(boolean pub, String path, String passphrase, String salt){
         try{
             Path p = Paths.get(path);
-            byte[] bytes = Files.readAllBytes(p);
             KeyFactory kf = KeyFactory.getInstance("RSA");
             if (pub){
+                byte[] bytes = Files.readAllBytes(p);
                 X509EncodedKeySpec ks = new X509EncodedKeySpec(bytes);
                 return kf.generatePublic(ks);
             }else{
+                SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+                KeySpec spec = new PBEKeySpec(passphrase.toCharArray(), salt.getBytes(), 65536, 256);
+                SecretKey tmp = factory.generateSecret(spec);
+                SecretKey secret = new SecretKeySpec(tmp.getEncoded(), "AES");
+
+                String encr = Files.readAllLines(p).get(0);
+                String decr = decrAES(encr, secret.getEncoded());
+                byte[] bytes = Base64.getDecoder().decode(decr);
                 PKCS8EncodedKeySpec ks = new PKCS8EncodedKeySpec(bytes);
                 return kf.generatePrivate(ks);
             }
         }catch (Exception e){
-            System.err.print("Error Reading Key: "+e);
+            System.err.print("Error Reading Keys");
+            System.exit(1);
             return null;
         }
     }
@@ -110,7 +131,7 @@ class CryOperations{
             //keyGen.init(256);
             keyGen.init(128);
             Key key = keyGen.generateKey();
-            System.out.println(key.getEncoded());
+            //System.out.println(key.getEncoded());
             return key.getEncoded();
         }catch (Exception e){
             System.err.println("Error generating AES Key " + e);
@@ -125,32 +146,32 @@ class CryOperations{
             Cipher c;
 
             // Generating IV.
-            System.out.print("Generating IV...");
+            //System.out.print("Generating IV...");
             int ivSize = 16;
             byte[] iv = new byte[ivSize];
             SecureRandom random = new SecureRandom();
             random.nextBytes(iv);
             IvParameterSpec ivParameterSpec = new IvParameterSpec(iv);
-            System.out.print("OK\n");
+            //System.out.print("OK\n");
 
             //convert key
-            System.out.print("Setting Key...");
+            //System.out.print("Setting Key...");
             Key originalKey = new SecretKeySpec(key, 0, key.length, "AES");
-            System.out.print("OK\n");
+            //System.out.print("OK\n");
 
             // ciphering
-            System.out.print("Ciphering...");
+            //System.out.print("Ciphering...");
             c  = Cipher.getInstance("AES/CBC/PKCS5Padding");
             c.init(Cipher.ENCRYPT_MODE,originalKey,ivParameterSpec);
             byte[] msgenc = c.doFinal(msg.getBytes());
-            System.out.print("OK\n");
+            //System.out.print("OK\n");
 
             // Combine IV and encrypted part.
-            System.out.print("Combine IV and ecrypted part...");
+            //System.out.print("Combine IV and ecrypted part...");
             byte[] finalMsgEnc = new byte[ivSize + msgenc.length];
             System.arraycopy(iv, 0, finalMsgEnc, 0, ivSize);
             System.arraycopy(msgenc, 0, finalMsgEnc, ivSize, msgenc.length);
-            System.out.print("OK\n");
+            //System.out.print("OK\n");
 
             return Base64.getEncoder().encodeToString(finalMsgEnc);
         }catch (Exception e){
@@ -277,7 +298,7 @@ class CryOperations{
             // System.out.print("Generate Nonce...");
             byte bytes[] = new byte[8];
             random.nextBytes(bytes);
-            System.out.print(Base64.getEncoder().encodeToString(bytes)+ "OK\n");
+            //System.out.print(Base64.getEncoder().encodeToString(bytes)+ " OK\n");
             result[3] = Base64.getEncoder().encodeToString(bytes);
             return result;
         }catch( Exception e ){
@@ -296,6 +317,7 @@ class CryOperations{
                 return payload;
             }
             elem = payload.get("nonce");
+            //System.out.println("Payload Recv" + elem.getAsString());
             if( !elem.getAsString().equals(expectedNonce) ){
                 System.err.println("Something went wrong with the nonce expected");
                 return null;

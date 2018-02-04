@@ -35,7 +35,7 @@ class CCOperations{
     }
 
     boolean
-    checkCertChain(X509Certificate cac){
+    checkCertChain(X509Certificate cac, boolean initSession){
         try{
             // X509Certificate cac = (X509Certificate) ks.getCertificate("CITIZEN AUTHENTICATION CERTIFICATE");
             //
@@ -47,6 +47,9 @@ class CCOperations{
             // System.out.println("size->"+allCerts.size());
             allCerts.setCertificateEntry("CITIZEN AUTHENTICATION CERTIFICATE", cac);
             // System.out.println("size->"+allCerts.size());
+            X509Certificate ca = readCertCA();
+            System.out.print(ca);
+            allCerts.setCertificateEntry("SERVER CA", ca);
 
             Enumeration<String> aliases = allCerts.aliases();
             //for (Enumeration<String> aliases = allCerts.aliases(); aliases.hasMoreElements();)
@@ -78,17 +81,17 @@ class CCOperations{
                 }
             }
 
-            // System.out.println("Anchors Size->"+anchors.size());
-            // System.out.println("Intermediates Size->"+intermediates.size());
-
-            Security.setProperty("ocsp.enable", "true");
-            System.setProperty("com.sun.security.enableCRLDP", "true");
-
+            //System.out.println("Anchors Size->"+anchors.size());
+            //System.out.println("Intermediates Size->"+intermediates.size());
+            if(!initSession){
+                Security.setProperty("ocsp.enable", "true");
+                System.setProperty("com.sun.security.enableCRLDP", "true");
+            }
             X509CertSelector selector = new X509CertSelector();
             selector.setCertificate(cac);
 
             PKIXBuilderParameters pkixParams = new PKIXBuilderParameters(anchors,selector);
-            //pkixParams.setRevocationEnabled(false);
+            if(initSession) pkixParams.setRevocationEnabled(false);
 
             CollectionCertStoreParameters interCertsParams = new CollectionCertStoreParameters(intermediates);
             CertStore interCerts = CertStore.getInstance("Collection", interCertsParams);
@@ -102,12 +105,10 @@ class CCOperations{
             CertPathBuilder builder = CertPathBuilder.getInstance("PKIX");
             PKIXCertPathBuilderResult path = (PKIXCertPathBuilderResult)builder.build(pkixParams);
 
-            // System.out.println(path);
             CertPathValidator cpv = CertPathValidator.getInstance("PKIX");
             PKIXParameters validationParams = new PKIXParameters(anchors);
-            //validationParams.setRevocationEnabled(false);
+            if(initSession) validationParams.setRevocationEnabled(false);
             validationParams.setDate(new Date());
-            //System.out.println();
 
             try{
                 cpv.validate(path.getCertPath(),validationParams);
@@ -177,6 +178,15 @@ class CCOperations{
         return;
     }
 
+    X509Certificate
+    readCertCA() throws Exception{
+        //System.out.println("Read Cert");
+        CertificateFactory fact = CertificateFactory.getInstance("X.509");
+        InputStream is = Files.newInputStream(Paths.get("./certs/myCA.crt"));
+        X509Certificate cer = (X509Certificate) fact.generateCertificate(is);
+        //System.out.println(cer.toString());
+        return cer;
+    }
 
     String
     sign(String toSign){

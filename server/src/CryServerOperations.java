@@ -86,7 +86,6 @@ class CryServerOperations{
     String[]
     processPayloadSend(String payload, byte[] sessionKey){
         try{
-            // TODO 256 bit its too long for java, additional files are required
             byte[] keyForMac = Arrays.copyOfRange(sessionKey, 0, sessionKey.length/2);
             byte[] keyForEnc = Arrays.copyOfRange(sessionKey, sessionKey.length/2, sessionKey.length);
             System.out.print("Encrypting Payload..");

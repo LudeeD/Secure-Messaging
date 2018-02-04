@@ -1,13 +1,13 @@
 import java.util.*;
 import java.lang.Thread;
 import java.net.Socket;
-import java.io.BufferedReader;
-import java.io.OutputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import com.google.gson.*;
 import com.google.gson.stream.*;
 import java.security.*;
+import java.security.spec.*;
+import java.security.cert.*;
 
 class ClientActions{
 
@@ -15,6 +15,7 @@ class ClientActions{
     JsonReader in;
     OutputStream out;
     BufferedReader br;
+    Console console;
     CCOperations cc;
     CryOperations cry;
     DHSession session = null;
@@ -79,7 +80,6 @@ class ClientActions{
                 expectedNonce = result[3];
             }
 
-            //System.out.println( "Send cmd: " + msg );
             out.write ( msg.getBytes( StandardCharsets.UTF_8 ) );
             //System.out.println("Sent!!!!");
         }catch (Exception e){
@@ -323,7 +323,6 @@ class ClientActions{
         System.out.println("Text of Message: " + decrMsg);
 
         JsonArray receipts = result.get("receipts").getAsJsonArray();
-        System.out.printf("\n");
         for ( JsonElement rec : receipts ){
             JsonObject r = rec.getAsJsonObject();
             System.out.println(new Date(r.get("date").getAsLong()));
@@ -412,15 +411,16 @@ class ClientActions{
     }
 
     void
-    establishSession(){
+    establishSession(String st){
         //System.out.print("Establishing Session...");
         String type = "session";
+        String subtype = st;
         String ln = System.getProperty("line.separator");
         String pubk = "Something is not right";
         String cert = "Something is not right";
         String sign = "Something is not right";
         try{
-            session = new DHSession();
+            session = new DHSession(subtype);
             pubk = session.getStringPubKey();
             cert = cc.getCertString();
             String toSign = pubk+ln+cert;
@@ -431,13 +431,19 @@ class ClientActions{
         }
 
         sendCommand(    "\"type\":\""+type+"\","+
+                        "\"subtype\":\""+subtype+"\","+
                         "\"pubk\":\""+pubk+"\","+
                         "\"cert\":\""+cert+"\","+
                         "\"signature\":\""+sign+"\"", true);
 
         try{
-            // TODO verify the response of server for success
             JsonObject data = new JsonParser().parse( in ).getAsJsonObject();
+
+            CertificateFactory fact = CertificateFactory.getInstance("X.509");
+            X509Certificate cer = (X509Certificate) fact.generateCertificate(
+                    new ByteArrayInputStream(data.get("cert").getAsString().getBytes()));
+
+            if (cc.checkCertChain(cer, true)) System.out.println("Session Establhished Sucessufully");
             pubk = data.get( "pubk" ).getAsString();
             session.generateSecret(pubk);
         }catch(Exception e){
@@ -475,7 +481,7 @@ class ClientActions{
                         "| program will not work without the citizen    |\n"+
                         "| card.                                        |\n"+
                         "| Please connect a CC and try again            |\n"+
-                        "|  1 - Sou o Santos e não tenho leitor         |\n"+
+                        "|                                              |\n"+
                         "|  0 - Exit Program and try again              |\n"+
                         "#==============================================|\n"+
                         "opt -> "
@@ -519,7 +525,8 @@ class ClientActions{
                         "| A encrypted session is going to be made      |\n"+
                         "| between this client and the Server           |\n"+
                         "|                                              |\n"+
-                        "|  1 - Continue                                |\n"+
+                        "|  2 - Elliptic Curves Key Exchange            |\n"+
+                        "|  1 - Diffie Helman Key Exchange              |\n"+
                         "|  0 - Exit Program                            |\n"+
                         "#==============================================|\n"+
                         "opt -> "
@@ -536,6 +543,23 @@ class ClientActions{
             return null;
         }
     }
+
+    String
+    getPassword(){
+        try{
+            String password = null;
+            char[] passwd;
+            if ((console = System.console()) != null && (passwd = console.readPassword("%s", "Private Key Password:")) != null) {
+                password = new String(passwd);
+                java.util.Arrays.fill(passwd, ' ');
+            }
+            return password;
+        }catch (Exception e){
+            System.err.println("Error Reading password");
+            return null;
+        }
+    }
+
 
     int
     getOpt(int min, int max){
@@ -576,9 +600,10 @@ class ClientActions{
 
         // Establish Session
         printEstablishSession();
-        opt = getOpt(0,1);
+        opt = getOpt(0,2);
         if( opt == 0 ) serverClose();
-        establishSession();
+        if( opt == 1 ) establishSession("DH");
+        if( opt == 2 ) establishSession("EC");
 
         // Kind Of Login
         boolean sucess_login = false;
@@ -593,27 +618,30 @@ class ClientActions{
             String path;
             PublicKey pubK = null;
             PrivateKey privK = null;
+            String demo1234 = getPassword();
+            String salt = uuid;
+
             switch (opt){
                 case 0: serverClose();
                         break;
                 case 1: System.out.println("Keys path (e.g ./teste");
                         path = getFileName();
-                        KeyPair kp = cry.generateKey(path);
+                        KeyPair kp = cry.generateKey(path, demo1234, salt);
                         pubK = kp.getPublic();
                         privK = kp.getPrivate();
                         break;
                 case 2: System.out.println("Public Key path(e.g ./teste.pub)");
                         path = getFileName();
-                        pubK = (PublicKey)cry.readKey(true, path);
+                        pubK = (PublicKey)cry.readKey(true, path, demo1234, salt);
                         System.out.println("Private Key path(e.g ./teste.key)");
                         path = getFileName();
-                        privK = (PrivateKey)cry.readKey(false, path);
+                        privK = (PrivateKey)cry.readKey(false, path, demo1234, salt);
                         break;
-                case 3: pubK  = (PublicKey)cry.readKey(true, "./user1.pub");
-                        privK = (PrivateKey)cry.readKey(false, "./user1.key");
+                case 3: pubK  = (PublicKey)cry.readKey(true, "./user1.pub", demo1234, salt);
+                        privK = (PrivateKey)cry.readKey(false, "./user1.key", demo1234, salt);
                         break;
-                case 4: pubK  = (PublicKey)cry.readKey(true, "./user2.pub");
-                        privK = (PrivateKey)cry.readKey(false, "./user2.key");
+                case 4: pubK  = (PublicKey)cry.readKey(true, "./user2.pub", demo1234, salt);
+                        privK = (PrivateKey)cry.readKey(false, "./user2.key", demo1234, salt);
                         break;
             }
 

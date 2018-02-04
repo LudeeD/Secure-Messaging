@@ -48,6 +48,7 @@ class ServerActions implements Runnable {
             }
             if (data.isJsonObject()) {
                 currNonce = data.getAsJsonObject().get("nonce").getAsString();
+                System.out.println("currNonce " + currNonce);
                 JsonObject r = cry.processPayloadRecv(data.getAsJsonObject(),session.getSharedSecret());
                 return r;
             }
@@ -84,7 +85,7 @@ class ServerActions implements Runnable {
                         "\"nonce\":\""+currNonce+"\""+
                         "}";
             }
-            //System.out.println( "Send result: " + msg );
+            System.out.println( "Send nonce: " + currNonce );
             out.write ( msg.getBytes( StandardCharsets.UTF_8 ) );
             System.out.println("Sent!!!");
         }catch (Exception e){
@@ -111,7 +112,7 @@ class ServerActions implements Runnable {
             System.out.println("Establish Session (Server)");
             try{
                 pubk = data.get( "pubk" ).getAsString();
-                session = new DHSession(pubk);
+                session = new DHSession(pubk, data.get("subtype").getAsString());
 
                 currUUID = data.get( "cert" ).getAsString();
                 CertificateFactory fact = CertificateFactory.getInstance("X.509");
@@ -122,9 +123,9 @@ class ServerActions implements Runnable {
                 currUUID =  Base64.getEncoder().encodeToString(hash);
 
                 pubk = session.getStringPubKey();
-                //cert = cry.getCertString();
-                //String toSign = pubk+ln+cert;
-                //sign = cry.sign(toSign);
+                cert = cry.getCertString();
+                String toSign = pubk+ln+cert;
+                sign = cry.sign(toSign);
 
                 session.generateSecret();
             }catch(Exception e){
@@ -313,7 +314,7 @@ class ServerActions implements Runnable {
             JsonElement nonce = data.get( "nonce" );
             if (id == null || msg == null || receipt == null) {
                 System.err.print ( "Badly formated \"receipt\" request: " + data );
-                sendResult( null, "\"wrong request format\"" , false);
+                //sendResult( null, "\"wrong request format\"" , false);
                 return;
             }
 
@@ -321,13 +322,13 @@ class ServerActions implements Runnable {
 
             if (registry.messageWasRed( fromId, msg.getAsString() ) == false) {
                 System.err.print ( "Unknown, or not yet red, message for \"receipt\" request: " + data );
-                sendResult( null, "\"wrong parameters\"" , false);
+                //sendResult( null, "\"wrong parameters\"" , false);
                 return;
             }
 
             if(registry.compareNonce(nonce.getAsString(),fromId,msg.getAsString())==false){
               System.err.print ("Nonce is not valid " );
-              sendResult( null, "\"wrong nonce\"" , false);
+              //sendResult( null, "\"wrong nonce\"" , false);
               return;
             }
             // Store receipt
