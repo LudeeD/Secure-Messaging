@@ -74,7 +74,7 @@ class CryOperations{
             if (secret == null) Files.write(Paths.get(path), k.getEncoded());
             else{
                 String key = Base64.getEncoder().encodeToString(k.getEncoded());
-                String encr = encrAES(key,secret.getEncoded());
+                String encr = encrAESKey(key,secret.getEncoded());
                 List<String> w = new ArrayList<String>();
                 w.add(encr);
                 Files.write(Paths.get(path), w);
@@ -100,7 +100,7 @@ class CryOperations{
                 SecretKey secret = new SecretKeySpec(tmp.getEncoded(), "AES");
 
                 String encr = Files.readAllLines(p).get(0);
-                String decr = decrAES(encr, secret.getEncoded());
+                String decr = decrAESKey(encr, secret.getEncoded());
                 byte[] bytes = Base64.getDecoder().decode(decr);
                 PKCS8EncodedKeySpec ks = new PKCS8EncodedKeySpec(bytes);
                 return kf.generatePrivate(ks);
@@ -125,13 +125,22 @@ class CryOperations{
     //}
 
     byte[]
-    generateKeyAES(){
+    generateKeyAES(String mode){
         try{
-            KeyGenerator keyGen = KeyGenerator.getInstance("AES");
-            //keyGen.init(256);
-            keyGen.init(128);
-            Key key = keyGen.generateKey();
-            //System.out.println(key.getEncoded());
+            KeyGenerator keyGen;
+            Key key = null;
+            if(mode.equals("AES")){
+                keyGen = KeyGenerator.getInstance("AES");
+                keyGen.init(256);
+                //keyGen.init(128);
+                key = keyGen.generateKey();
+                //System.out.println(key.getEncoded());
+            }
+            if(mode.equals("3DES")){
+                keyGen = KeyGenerator.getInstance("DESede");
+                keyGen.init(168);
+                key = keyGen.generateKey();
+            }
             return key.getEncoded();
         }catch (Exception e){
             System.err.println("Error generating AES Key " + e);
@@ -140,38 +149,108 @@ class CryOperations{
     }
 
     String
-    encrAES(String msg,byte[] key){
+    encrAESKey(String msg,byte[] key){
         try{
             SecretKeyFactory skf;
             Cipher c;
-
-            // Generating IV.
-            //System.out.print("Generating IV...");
-            int ivSize = 16;
-            byte[] iv = new byte[ivSize];
+            int ivSize = 0;
+            byte[] iv;
             SecureRandom random = new SecureRandom();
+            IvParameterSpec ivParameterSpec;
+            Key originalKey;
+            byte[] msgenc;
+            byte[] finalMsgEnc = null;
+            //System.out.print("Generating IV...");
+            ivSize = 16;
+            iv = new byte[ivSize];
             random.nextBytes(iv);
-            IvParameterSpec ivParameterSpec = new IvParameterSpec(iv);
+            ivParameterSpec = new IvParameterSpec(iv);
             //System.out.print("OK\n");
 
-            //convert key
             //System.out.print("Setting Key...");
-            Key originalKey = new SecretKeySpec(key, 0, key.length, "AES");
+            originalKey = new SecretKeySpec(key, 0, key.length, "AES");
             //System.out.print("OK\n");
 
-            // ciphering
             //System.out.print("Ciphering...");
             c  = Cipher.getInstance("AES/CBC/PKCS5Padding");
             c.init(Cipher.ENCRYPT_MODE,originalKey,ivParameterSpec);
-            byte[] msgenc = c.doFinal(msg.getBytes());
+            msgenc = c.doFinal(msg.getBytes());
             //System.out.print("OK\n");
 
-            // Combine IV and encrypted part.
             //System.out.print("Combine IV and ecrypted part...");
-            byte[] finalMsgEnc = new byte[ivSize + msgenc.length];
+            finalMsgEnc = new byte[ivSize + msgenc.length];
             System.arraycopy(iv, 0, finalMsgEnc, 0, ivSize);
             System.arraycopy(msgenc, 0, finalMsgEnc, ivSize, msgenc.length);
             //System.out.print("OK\n");
+            return Base64.getEncoder().encodeToString(finalMsgEnc);
+        }catch (Exception e){
+            System.err.println("Error enc AES" + e);
+            return null;
+        }
+    }
+    
+    String
+    encrAES(String msg,byte[] key, String mode){
+        try{
+            SecretKeyFactory skf;
+            Cipher c;
+            int ivSize = 0;
+            byte[] iv;
+            SecureRandom random = new SecureRandom();
+            IvParameterSpec ivParameterSpec;
+            Key originalKey;
+            byte[] msgenc;
+            byte[] finalMsgEnc = null;
+            if(mode.equals("AES")){
+                //System.out.print("Generating IV...");
+                ivSize = 16;
+                iv = new byte[ivSize];
+                random.nextBytes(iv);
+                ivParameterSpec = new IvParameterSpec(iv);
+                //System.out.print("OK\n");
+
+                //System.out.print("Setting Key...");
+                originalKey = new SecretKeySpec(key, 0, key.length, "AES");
+                //System.out.print("OK\n");
+
+                //System.out.print("Ciphering...");
+                c  = Cipher.getInstance("AES/CBC/PKCS5Padding");
+                c.init(Cipher.ENCRYPT_MODE,originalKey,ivParameterSpec);
+                msgenc = c.doFinal(msg.getBytes());
+                //System.out.print("OK\n");
+
+                //System.out.print("Combine IV and ecrypted part...");
+                finalMsgEnc = new byte[ivSize + msgenc.length];
+                System.arraycopy(iv, 0, finalMsgEnc, 1, ivSize);
+                System.arraycopy(msgenc, 0, finalMsgEnc, ivSize+1, msgenc.length);
+                finalMsgEnc[0] = 0x01;
+                //System.out.print("OK\n");
+            }
+            if(mode.equals("3DES")){
+                //System.out.print("Generating IV...");
+                ivSize = 8;
+                iv = new byte[ivSize];
+                random.nextBytes(iv);
+                ivParameterSpec = new IvParameterSpec(iv);
+                //System.out.print("OK\n");
+
+                //System.out.print("Setting Key...");
+                originalKey = new SecretKeySpec(key, 0, key.length, "DESede");
+                //System.out.print("OK\n");
+
+                //System.out.print("Ciphering...");
+                c  = Cipher.getInstance("DESede/CBC/PKCS5Padding");
+                c.init(Cipher.ENCRYPT_MODE,originalKey,ivParameterSpec);
+                msgenc = c.doFinal(msg.getBytes());
+                //System.out.print("OK\n");
+
+                //System.out.print("Combine IV and ecrypted part...");
+                finalMsgEnc = new byte[1+ ivSize + msgenc.length];
+                System.arraycopy(iv, 0, finalMsgEnc, 1, ivSize);
+                System.arraycopy(msgenc, 0, finalMsgEnc, ivSize+1, msgenc.length);
+                finalMsgEnc[0] = 0x02;
+                //System.out.print("OK\n");
+            }
 
             return Base64.getEncoder().encodeToString(finalMsgEnc);
         }catch (Exception e){
@@ -181,29 +260,89 @@ class CryOperations{
     }
 
     String
-    decrAES(String msgEncEnconded,byte[] key){
+    decrAESKey(String msgEncEnconded,byte[] key){
         try{
-            int ivSize = 16;
             byte[] msgEnc = Base64.getDecoder().decode(msgEncEnconded);
+            // Type of encryption
+            int ivSize;
+            Key originalKey;
+            byte[] iv;
+            IvParameterSpec ivParameterSpec;
+            int encryptedSize;
+            byte[] encryptedBytes;
+            Cipher cipherDecrypt;
+            byte[] decrypted;
 
-            Key originalKey = new SecretKeySpec(key, 0, key.length, "AES");
+            ivSize = 16;
+            originalKey = new SecretKeySpec(key, 0, key.length, "AES");
 
-            // Extract IV.
-            byte[] iv = new byte[ivSize];
+            iv = new byte[ivSize];
             System.arraycopy(msgEnc, 0, iv, 0, iv.length);
-            IvParameterSpec ivParameterSpec = new IvParameterSpec(iv);
+            ivParameterSpec = new IvParameterSpec(iv);
 
-            int encryptedSize = msgEnc.length - ivSize;
-            byte[] encryptedBytes = new byte[encryptedSize];
+            encryptedSize = msgEnc.length - ivSize;
+            encryptedBytes = new byte[encryptedSize];
             System.arraycopy(msgEnc, ivSize, encryptedBytes, 0, encryptedSize);
 
-            Cipher cipherDecrypt = Cipher.getInstance("AES/CBC/PKCS5Padding");
+            cipherDecrypt = Cipher.getInstance("AES/CBC/PKCS5Padding");
             cipherDecrypt.init(Cipher.DECRYPT_MODE, originalKey, ivParameterSpec);
-            byte[] decrypted = cipherDecrypt.doFinal(encryptedBytes);
-
+            decrypted = cipherDecrypt.doFinal(encryptedBytes);
             return new String(decrypted);
         }catch( Exception e ){
-            System.err.println("Error enc AES" + e);
+            System.err.println("Error on decr" + e);
+            return null;
+        }
+    }
+
+    String
+    decrAES(String msgEncEnconded,byte[] key){
+        try{
+            byte[] msgEnc = Base64.getDecoder().decode(msgEncEnconded);
+            // Type of encryption
+
+            int ivSize;
+            Key originalKey;
+            byte[] iv;
+            IvParameterSpec ivParameterSpec;
+            int encryptedSize;
+            byte[] encryptedBytes;
+            Cipher cipherDecrypt;
+            byte[] decrypted;
+            if (msgEnc[0] == 0x01){
+                ivSize = 16;
+                originalKey = new SecretKeySpec(key, 0, key.length, "AES");
+
+                iv = new byte[ivSize];
+                System.arraycopy(msgEnc, 1, iv, 0, iv.length);
+                ivParameterSpec = new IvParameterSpec(iv);
+
+                encryptedSize = msgEnc.length - ivSize - 1;
+                encryptedBytes = new byte[encryptedSize];
+                System.arraycopy(msgEnc, ivSize+1, encryptedBytes, 0, encryptedSize);
+
+                cipherDecrypt = Cipher.getInstance("AES/CBC/PKCS5Padding");
+                cipherDecrypt.init(Cipher.DECRYPT_MODE, originalKey, ivParameterSpec);
+                decrypted = cipherDecrypt.doFinal(encryptedBytes);
+            }else{
+                ivSize = 8;
+                originalKey = new SecretKeySpec(key, 0, key.length, "DESede");
+
+                iv = new byte[ivSize];
+                System.arraycopy(msgEnc, 1, iv, 0, iv.length);
+                ivParameterSpec = new IvParameterSpec(iv);
+
+                encryptedSize = msgEnc.length - ivSize - 1;
+                encryptedBytes = new byte[encryptedSize];
+                System.arraycopy(msgEnc, ivSize+1, encryptedBytes, 0, encryptedSize);
+
+                cipherDecrypt = Cipher.getInstance("DESede/CBC/PKCS5Padding");
+                cipherDecrypt.init(Cipher.DECRYPT_MODE, originalKey, ivParameterSpec);
+                decrypted = cipherDecrypt.doFinal(encryptedBytes);
+
+            }
+            return new String(decrypted);
+        }catch( Exception e ){
+            System.err.println("Error on decr" + e);
             return null;
         }
     }

@@ -179,8 +179,8 @@ class ClientActions{
             String pubk;
             try{
                 //for dst
-                keyAES = cry.generateKeyAES();
-                msgEnc = cry.encrAES(msg, keyAES);
+                keyAES = cry.generateKeyAES("3DES");
+                msgEnc = cry.encrAES(msg, keyAES, "3DES");
                 sendCommand("\"type\":\""+subType+"\",\"id\":\""+dst+"\"",false);
                 JsonObject data = new JsonParser().parse( in ).getAsJsonObject();
                 JsonObject  jobject = cry.processPayloadRecv(data.getAsJsonObject(),session.getSharedSecret(), expectedNonce);
@@ -189,8 +189,8 @@ class ClientActions{
                 pubk = jobject.get("pubk").getAsString();
                 aesKeyEnc = cry.encrRSA(pubk,keyAES);
                 //for source
-                keyAES = cry.generateKeyAES();
-                copy = cry.encrAES(msg, keyAES);
+                keyAES = cry.generateKeyAES("3DES");
+                copy = cry.encrAES(msg, keyAES, "3DES");
                 aesKeyEncSrc = cry.encrRSA(currUser.getPublicKeyString(),keyAES);
                 //sign message
                 //for dst
@@ -199,7 +199,6 @@ class ClientActions{
                 msgFinal = msgFinal.concat("\n").concat(msgFinalSign);
                 //for source
                 msgCopyFinal = aesKeyEncSrc.concat("\n").concat(copy);
-                // #Todo Sign the encrypted Data or the Clear Text?
                 msgCopyFinalSign = cc.sign(msgCopyFinal);
                 msgCopyFinal = msgCopyFinal.concat("\n").concat(msgCopyFinalSign);
 
